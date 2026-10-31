@@ -19,6 +19,12 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Trang giao diện tĩnh (index.html)
+                .requestMatchers(
+                    "/",
+                    "/index.html",
+                    "/favicon.ico"
+                ).permitAll()
                 // Mở quyền truy cập tài liệu Swagger UI & API Docs
                 .requestMatchers(
                     "/swagger-ui.html",
@@ -34,4 +40,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-
