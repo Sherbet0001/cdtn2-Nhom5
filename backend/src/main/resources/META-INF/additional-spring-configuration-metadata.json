@@ -1,0 +1,17 @@
+{
+  "properties": [
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Khóa bí mật dùng để ký số HMAC-SHA256 cho JWT Token.",
+      "defaultValue": "vlu-parttime-job-marketplace-secret-key-2026-sprint1-secure-256bit"
+    },
+    {
+      "name": "app.jwt.expiration-seconds",
+      "type": "java.lang.Long",
+      "description": "Thời hạn hiệu lực của JWT Token tính bằng giây (7200 giây = 2 giờ).",
+      "defaultValue": 7200
+    }
+  ]
+}
+
