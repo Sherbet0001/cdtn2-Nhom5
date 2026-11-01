@@ -42,9 +42,9 @@ Tất cả tài khoản mẫu đều được băm mật khẩu bằng **BCrypt*
 
 | Vai trò (Role) | Email đăng nhập | Họ và tên | Mật khẩu |
 | :--- | :--- | :--- | :--- |
-| **STUDENT** | `khoa.2374802013428@vanlanguni.vn` | Bùi Đăng Khoa | `Abc@12345` |
-| **STUDENT** | `tien.2374802010493@vanlanguni.vn` | Đoàn Xuân Tiến | `Abc@12345` |
-| **STUDENT** | `dat.2374802010107@vanlanguni.vn` | Viên Thành Đạt | `Abc@12345` |
+| **STUDENT** | `sv1@vanlanguni.vn` | Lê Hoàng Nam | `Abc@12345` |
+| **STUDENT** | `sv2@vanlanguni.vn` | Phạm Minh Châu | `Abc@12345` |
+| **STUDENT** | `sv3@vanlanguni.vn` | Võ Quốc Bảo | `Abc@12345` |
 | **EMPLOYER** | `hr@cafegocpho.vn` | Nguyễn Minh Hoàng (Cafe Góc Phố) | `Abc@12345` |
 | **EMPLOYER** | `tuyendung@eduviet.vn` | Trần Thu Hà (Trung tâm EduViet) | `Abc@12345` |
 | **ADMIN** | `admin@vlu.edu.vn` | Quản trị viên Hệ thống | `Abc@12345` |

@@ -114,8 +114,8 @@ class AuthAndProfileIntegrationTests {
     @DisplayName("FR-01: Đăng ký thất bại khi email đã tồn tại trong hệ thống (409 CONFLICT - EMAIL_ALREADY_EXISTS)")
     void registerUser_FR01_duplicateEmail_throwsEmailAlreadyExists() throws Exception {
         RegisterRequest request = RegisterRequest.builder()
-                .fullName("Bùi Đăng Khoa Bản Sao")
-                .email("khoa.2374802013428@vanlanguni.vn")
+                .fullName("Lê Hoàng Nam Bản Sao")
+                .email("sv1@vanlanguni.vn")
                 .password("Abc@12345")
                 .role("STUDENT")
                 .build();
@@ -133,7 +133,7 @@ class AuthAndProfileIntegrationTests {
     @DisplayName("FR-02: Đăng nhập thành công với thông tin hợp lệ, trả về JWT Bearer Token có thời hạn 7200 giây (2 giờ)")
     void loginUser_FR02_validCredentials_returnsJwtTokenWithTwoHoursExpiry() throws Exception {
         LoginRequest loginRequest = LoginRequest.builder()
-                .email("khoa.2374802013428@vanlanguni.vn")
+                .email("sv1@vanlanguni.vn")
                 .password("Abc@12345")
                 .build();
 
@@ -146,14 +146,14 @@ class AuthAndProfileIntegrationTests {
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.data.expiresIn").value(7200))
                 .andExpect(jsonPath("$.data.user.role").value("STUDENT"))
-                .andExpect(jsonPath("$.data.user.fullName").value("Bùi Đăng Khoa"));
+                .andExpect(jsonPath("$.data.user.fullName").value("Lê Hoàng Nam"));
     }
 
     @Test
     @DisplayName("FR-02: Đăng nhập thất bại khi sai mật khẩu, trả về 401 UNAUTHORIZED (INVALID_CREDENTIALS)")
     void loginUser_FR02_wrongPassword_returnsUnauthorizedJson() throws Exception {
         LoginRequest loginRequest = LoginRequest.builder()
-                .email("khoa.2374802013428@vanlanguni.vn")
+                .email("sv1@vanlanguni.vn")
                 .password("SaiMatKhau123")
                 .build();
 
@@ -168,7 +168,7 @@ class AuthAndProfileIntegrationTests {
     @Test
     @DisplayName("FR-03: Đăng xuất tài khoản thành công khi đã xác thực JWT")
     void logoutUser_FR03_authenticatedUser_returnsSuccessResponse() throws Exception {
-        String token = obtainToken("khoa.2374802013428@vanlanguni.vn", "Abc@12345");
+        String token = obtainToken("sv1@vanlanguni.vn", "Abc@12345");
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .header("Authorization", "Bearer " + token))
@@ -189,7 +189,7 @@ class AuthAndProfileIntegrationTests {
     @Test
     @DisplayName("FR-04 & NFR-02(c): Sinh viên (STUDENT) gọi API của Nhà tuyển dụng (EMPLOYER) hoặc Quản trị viên (ADMIN) trả về 403 FORBIDDEN")
     void accessRestrictedApi_FR04_NFR02c_studentCallingEmployerOrAdminApi_returnsForbidden403() throws Exception {
-        String studentToken = obtainToken("khoa.2374802013428@vanlanguni.vn", "Abc@12345");
+        String studentToken = obtainToken("sv1@vanlanguni.vn", "Abc@12345");
 
         // SV gọi API dành riêng cho Nhà tuyển dụng (EMPLOYER) -> 403 FORBIDDEN
         mockMvc.perform(post("/api/v1/jobs")
@@ -212,7 +212,7 @@ class AuthAndProfileIntegrationTests {
     @DisplayName("FR-04 & NFR-02(d): Gọi API với JWT Token đã hết hạn bị từ chối với 401 UNAUTHORIZED (TOKEN_EXPIRED)")
     void getMyProfile_FR04_NFR02d_expiredToken_returnsUnauthorizedTokenExpired() throws Exception {
         JwtProvider expiredJwtProvider = new JwtProvider(jwtProperties.getSecret(), -60L);
-        String expiredToken = expiredJwtProvider.generateToken(4L, "khoa.2374802013428@vanlanguni.vn", "STUDENT");
+        String expiredToken = expiredJwtProvider.generateToken(4L, "sv1@vanlanguni.vn", "STUDENT");
 
         mockMvc.perform(get("/api/v1/profiles/me")
                         .header("Authorization", "Bearer " + expiredToken))
@@ -224,24 +224,24 @@ class AuthAndProfileIntegrationTests {
     @Test
     @DisplayName("FR-05: Xem thông tin hồ sơ cá nhân hiện tại và danh mục địa điểm/ngành nghề thành công")
     void getMyProfile_FR05_authenticatedUser_returnsProfileDetails() throws Exception {
-        String token = obtainToken("khoa.2374802013428@vanlanguni.vn", "Abc@12345");
+        String token = obtainToken("sv1@vanlanguni.vn", "Abc@12345");
 
         mockMvc.perform(get("/api/v1/profiles/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.email").value("khoa.2374802013428@vanlanguni.vn"))
-                .andExpect(jsonPath("$.data.fullName").value("Bùi Đăng Khoa"))
+                .andExpect(jsonPath("$.data.email").value("sv1@vanlanguni.vn"))
+                .andExpect(jsonPath("$.data.fullName").value("Lê Hoàng Nam"))
                 .andExpect(jsonPath("$.data.role").value("STUDENT"));
     }
 
     @Test
     @DisplayName("FR-11: Sinh viên cập nhật hồ sơ học vấn và CV trực tuyến thành công, bỏ qua trường doanh nghiệp của NTD")
     void updateMyProfile_FR11_studentRole_updatesCvAndAcademicInfo() throws Exception {
-        String token = obtainToken("khoa.2374802013428@vanlanguni.vn", "Abc@12345");
+        String token = obtainToken("sv1@vanlanguni.vn", "Abc@12345");
 
         UpdateProfileRequest updateRequest = UpdateProfileRequest.builder()
-                .fullName("Bùi Đăng Khoa")
+                .fullName("Lê Hoàng Nam")
                 .phone("0914333999")
                 .locationId(5L)
                 .bio("Sinh viên năm 3 chuyên ngành CNPM tại ĐH Văn Lang")
