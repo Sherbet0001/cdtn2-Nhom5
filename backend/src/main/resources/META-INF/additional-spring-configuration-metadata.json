@@ -20,6 +20,18 @@
       "description": "Thời hạn hiệu lực của JWT Token tính bằng giây (7200 giây = 2 giờ).",
       "sourceType": "com.marketplace.config.JwtProperties",
       "defaultValue": 7200
+    },
+    {
+      "name": "springdoc.swagger-ui.path",
+      "type": "java.lang.String",
+      "description": "Đường dẫn truy cập giao diện Swagger UI.",
+      "defaultValue": "/swagger-ui.html"
+    },
+    {
+      "name": "springdoc.api-docs.path",
+      "type": "java.lang.String",
+      "description": "Đường dẫn truy cập tài liệu OpenAPI v3 JSON.",
+      "defaultValue": "/v3/api-docs"
     }
   ]
 }

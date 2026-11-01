@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
  * Chịu trách nhiệm ánh xạ errorCode từ AppException sang HTTP Status tương ứng và đóng gói vào ApiResponse.
  */
 @RestControllerAdvice
+@SuppressWarnings("null")
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(AppException.class)

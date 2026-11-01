@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("mysql")
 @EnabledIf("isMySqlReachable")
+@SuppressWarnings("null")
 class MySqlConfigurationIntegrationTests {
 
     @Autowired
