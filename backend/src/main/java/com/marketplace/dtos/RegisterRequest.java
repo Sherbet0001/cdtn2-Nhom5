@@ -30,3 +30,4 @@ public class RegisterRequest {
     @Pattern(regexp = "^(STUDENT|EMPLOYER)$", message = "Vai trò đăng ký chỉ chấp nhận STUDENT hoặc EMPLOYER")
     private String role;
 }
+

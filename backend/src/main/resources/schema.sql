@@ -111,3 +111,4 @@ CREATE TABLE IF NOT EXISTS tbl_notifications (
     CONSTRAINT fk_notifications_app FOREIGN KEY (application_id) REFERENCES tbl_applications (id) ON DELETE RESTRICT,
     INDEX idx_notifications_user_read (user_id, is_read, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

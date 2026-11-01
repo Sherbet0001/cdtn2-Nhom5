@@ -19,3 +19,4 @@ public class Category {
     @Column(name = "name", nullable = false, unique = true, length = 100)
     private String name;
 }
+

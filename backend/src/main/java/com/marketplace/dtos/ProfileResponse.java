@@ -27,3 +27,4 @@ public class ProfileResponse {
     private String companyName;
     private LocalDateTime updatedAt;
 }
+

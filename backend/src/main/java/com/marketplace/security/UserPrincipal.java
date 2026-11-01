@@ -21,3 +21,4 @@ public class UserPrincipal implements Principal {
         return email;
     }
 }
+

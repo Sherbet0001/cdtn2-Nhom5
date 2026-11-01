@@ -34,3 +34,4 @@ public class CatalogController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách địa điểm thành công", locations));
     }
 }
+

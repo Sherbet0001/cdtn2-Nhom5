@@ -54,3 +54,4 @@ public class CatalogService {
                 .collect(Collectors.toList());
     }
 }
+

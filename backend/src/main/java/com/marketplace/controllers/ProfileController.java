@@ -40,3 +40,4 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật hồ sơ cá nhân thành công", updatedProfile));
     }
 }
+

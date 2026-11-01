@@ -25,3 +25,4 @@ public class Location {
     @Column(name = "district", nullable = false, length = 80)
     private String district;
 }
+

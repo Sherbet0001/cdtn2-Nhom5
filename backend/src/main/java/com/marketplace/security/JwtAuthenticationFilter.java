@@ -90,3 +90,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.getWriter().write(objectMapper.writeValueAsString(errorBody));
     }
 }
+

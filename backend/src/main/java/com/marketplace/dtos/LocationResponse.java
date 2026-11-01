@@ -12,3 +12,4 @@ public class LocationResponse {
     private String city;
     private String district;
 }
+

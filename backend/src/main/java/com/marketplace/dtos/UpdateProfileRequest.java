@@ -36,3 +36,4 @@ public class UpdateProfileRequest {
     @Size(max = 150, message = "Tên doanh nghiệp / cửa hàng không được vượt quá 150 ký tự")
     private String companyName;
 }
+

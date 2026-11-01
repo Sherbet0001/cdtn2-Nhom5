@@ -19,3 +19,11 @@
 Thumbs.db
 antigravityrules
 *.log
+
+# Environment variables (Tuyệt đối không commit thông tin nhạy cảm)
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+

@@ -66,6 +66,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/locations").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/employer/**").hasRole("EMPLOYER")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/jobs/**").hasRole("EMPLOYER")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -94,3 +96,4 @@ public class SecurityConfig {
         response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 }
+

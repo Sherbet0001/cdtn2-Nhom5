@@ -56,3 +56,4 @@ public class Profile {
         this.updatedAt = LocalDateTime.now();
     }
 }
+

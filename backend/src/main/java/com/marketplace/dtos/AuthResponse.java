@@ -27,3 +27,4 @@ public class AuthResponse {
         private String status;
     }
 }
+

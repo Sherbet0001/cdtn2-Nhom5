@@ -2,8 +2,9 @@ package com.marketplace.security;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.marketplace.config.JwtProperties;
 import com.marketplace.exceptions.AppException;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
@@ -23,13 +24,21 @@ import java.util.Map;
 public class JwtProvider {
 
     private static final String HMAC_SHA256 = "HmacSHA256";
+    private static final int MIN_SECRET_LENGTH = 32;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final byte[] secretBytes;
     private final long expirationSeconds;
 
-    public JwtProvider(
-            @Value("${app.jwt.secret:vlu-parttime-job-marketplace-secret-key-2026-sprint1-secure-256bit}") String secret,
-            @Value("${app.jwt.expiration-seconds:7200}") long expirationSeconds) {
+    @Autowired
+    public JwtProvider(JwtProperties jwtProperties) {
+        this(jwtProperties.getSecret(), jwtProperties.getExpirationSeconds());
+    }
+
+    public JwtProvider(String secret, long expirationSeconds) {
+        if (secret == null || secret.trim().length() < MIN_SECRET_LENGTH) {
+            throw new IllegalArgumentException("JWT_SECRET phải có độ dài tối thiểu 32 ký tự (256-bit) cho thuật toán HMAC-SHA256");
+        }
         this.secretBytes = secret.getBytes(StandardCharsets.UTF_8);
         this.expirationSeconds = expirationSeconds;
     }
@@ -143,3 +152,4 @@ public class JwtProvider {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }
+
