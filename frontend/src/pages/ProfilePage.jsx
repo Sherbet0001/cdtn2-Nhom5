@@ -1,0 +1,550 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  AlertCircle,
+  BookOpen,
+  Building2,
+  CheckCircle2,
+  FileText,
+  GraduationCap,
+  Inbox,
+  Loader2,
+  MapPin,
+  Phone,
+  RefreshCw,
+  Save,
+  UserCheck,
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import profileService from '../services/profileService';
+
+const ProfilePage = () => {
+  const { user, syncUserProfileName } = useAuth();
+
+  // 3-State UI Pattern:
+  // 1) Loading State (isInitialLoading, isSubmitting)
+  // 2) Empty State (isProfileEmpty, locations.length === 0)
+  // 3) Error State (fetchError, submitError) kèm requestId và nút Thử lại (Retry)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
+  const [successToast, setSuccessToast] = useState('');
+
+  const [profile, setProfile] = useState(null);
+  const [locations, setLocations] = useState([]);
+
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phone: '',
+    locationId: '',
+    bio: '',
+    school: '',
+    major: '',
+    cvContent: '',
+    companyName: '',
+  });
+
+  const loadProfileAndLocations = useCallback(async () => {
+    setIsInitialLoading(true);
+    setFetchError(null);
+
+    try {
+      const [profileRes, locationsRes] = await Promise.all([
+        profileService.getMyProfile(),
+        profileService.getLocations(),
+      ]);
+
+      const fetchedProfile = profileRes.data;
+      const fetchedLocations = locationsRes.data || [];
+
+      setProfile(fetchedProfile);
+      setLocations(fetchedLocations);
+
+      if (fetchedProfile) {
+        setFormData({
+          fullName: fetchedProfile.fullName || '',
+          phone: fetchedProfile.phone || '',
+          locationId: fetchedProfile.locationId ? String(fetchedProfile.locationId) : '',
+          bio: fetchedProfile.bio || '',
+          school: fetchedProfile.school || '',
+          major: fetchedProfile.major || '',
+          cvContent: fetchedProfile.cvContent || '',
+          companyName: fetchedProfile.companyName || '',
+        });
+      }
+    } catch (error) {
+      setFetchError({
+        message: error.message || 'Không thể tải dữ liệu hồ sơ cá nhân từ máy chủ.',
+        requestId: error.requestId || 'N/A',
+      });
+    } finally {
+      setIsInitialLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProfileAndLocations();
+  }, [loadProfileAndLocations]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (submitError) setSubmitError(null);
+    if (successToast) setSuccessToast('');
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSuccessToast('');
+
+    try {
+      const payload = {
+        fullName: formData.fullName.trim(),
+        phone: formData.phone.trim(),
+        locationId: formData.locationId ? Number(formData.locationId) : null,
+        bio: formData.bio.trim(),
+        school: formData.school.trim(),
+        major: formData.major.trim(),
+        cvContent: formData.cvContent.trim(),
+        companyName: formData.companyName.trim(),
+      };
+
+      const response = await profileService.updateMyProfile(payload);
+      const updated = response.data;
+      setProfile(updated);
+      syncUserProfileName(updated.fullName);
+      setSuccessToast('Cập nhật hồ sơ cá nhân thành công!');
+    } catch (error) {
+      setSubmitError({
+        message: error.message || 'Không thể lưu thay đổi hồ sơ cá nhân.',
+        errors: error.errors || [],
+        requestId: error.requestId || 'N/A',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isStudent = (profile?.role || user?.role) === 'STUDENT';
+  const isEmployer = (profile?.role || user?.role) === 'EMPLOYER';
+
+  // Kiểm tra trạng thái rỗng (Empty State) khi người dùng mới đăng ký, chưa điền CV / Thông tin đơn vị
+  const isProfileIncomplete =
+    profile &&
+    !profile.phone &&
+    !profile.bio &&
+    ((isStudent && !profile.cvContent && !profile.school) ||
+      (isEmployer && !profile.companyName));
+
+  // 1. TRẠNG THÁI ĐANG TẢI (LOADING STATE - SKELETON SCREEN)
+  if (isInitialLoading) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-28 rounded-2xl bg-slate-200/80" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="h-80 rounded-2xl bg-slate-200/80" />
+            <div className="h-96 rounded-2xl bg-slate-200/80 lg:col-span-2" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. TRẠNG THÁI LỖI KHI TẢI DỮ LIỆU (ERROR STATE KÈM REQUEST ID VÀ NÚT RETRY)
+  if (fetchError) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-12">
+        <div
+          role="alert"
+          className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-900 shadow-sm"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-red-600" />
+            <div className="flex-1">
+              <h2 className="text-base font-bold">Không thể tải hồ sơ cá nhân</h2>
+              <p className="mt-1 text-sm text-red-800">{fetchError.message}</p>
+              <p className="mt-2 font-mono text-xs text-red-600">
+                Mã tra cứu sự cố (RequestId): {fetchError.requestId}
+              </p>
+              <button
+                type="button"
+                onClick={loadProfileAndLocations}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Thử lại (Retry)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      {/* Header Banner theo vai trò */}
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <UserCheck className="h-3.5 w-3.5 text-red-600" />
+              {isStudent
+                ? 'Hồ sơ Sinh viên & CV ứng tuyển (FR-05, FR-11)'
+                : isEmployer
+                ? 'Hồ sơ Nhà tuyển dụng & Đơn vị (FR-05, FR-16)'
+                : 'Hồ sơ Quản trị viên Hệ thống (FR-05)'}
+            </span>
+            <h1 className="mt-2 text-2xl font-bold text-slate-900">{profile?.fullName}</h1>
+            <p className="text-sm text-slate-500">{profile?.email}</p>
+          </div>
+
+          {profile?.updatedAt && (
+            <div className="text-xs text-slate-500">
+              Cập nhật lần cuối:{' '}
+              <span className="font-medium text-slate-700">
+                {new Date(profile.updatedAt).toLocaleString('vi-VN')}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 2. TRẠNG THÁI RỖNG (EMPTY STATE): Khi tài khoản mới đăng ký chưa có thông tin chi tiết / CV */}
+      {isProfileIncomplete && (
+        <div className="mb-6 rounded-2xl border border-dashed border-amber-300 bg-amber-50/70 p-5 text-amber-900">
+          <div className="flex items-start gap-3">
+            <Inbox className="mt-0.5 h-6 w-6 shrink-0 text-amber-600" />
+            <div>
+              <h2 className="text-sm font-bold">
+                {isStudent
+                  ? 'Hồ sơ của bạn chưa có thông tin CV và trường học'
+                  : 'Hồ sơ doanh nghiệp/cửa hàng của bạn chưa được cập nhật'}
+              </h2>
+              <p className="mt-1 text-xs text-amber-800">
+                {isStudent
+                  ? 'Vui lòng bổ sung trường học, chuyên ngành và nội dung CV bên dưới để có thể ứng tuyển việc làm part-time (FR-11, FR-12).'
+                  : 'Vui lòng bổ sung tên đơn vị/cửa hàng, địa điểm và giới thiệu để tăng độ tin cậy khi đăng tin tuyển dụng (FR-16).'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Cột trái: Thẻ tóm tắt trực quan (Chỉ hiển thị trường có dữ liệu thật từ API, không hardcode) */}
+        <aside className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-bold text-slate-900">Tóm tắt hồ sơ hiện tại</h2>
+
+          <div className="space-y-3 text-sm">
+            {profile?.phone && (
+              <div className="flex items-center gap-2.5 text-slate-700">
+                <Phone className="h-4 w-4 shrink-0 text-slate-400" />
+                <span>{profile.phone}</span>
+              </div>
+            )}
+
+            {profile?.locationName && (
+              <div className="flex items-center gap-2.5 text-slate-700">
+                <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
+                <span>{profile.locationName}</span>
+              </div>
+            )}
+
+            {isStudent && profile?.school && (
+              <div className="flex items-center gap-2.5 text-slate-700">
+                <GraduationCap className="h-4 w-4 shrink-0 text-slate-400" />
+                <span>{profile.school}</span>
+              </div>
+            )}
+
+            {isStudent && profile?.major && (
+              <div className="flex items-center gap-2.5 text-slate-700">
+                <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />
+                <span>Chuyên ngành: {profile.major}</span>
+              </div>
+            )}
+
+            {isEmployer && profile?.companyName && (
+              <div className="flex items-center gap-2.5 text-slate-700">
+                <Building2 className="h-4 w-4 shrink-0 text-slate-400" />
+                <span className="font-semibold">{profile.companyName}</span>
+              </div>
+            )}
+          </div>
+
+          {profile?.bio && (
+            <div className="border-t border-slate-100 pt-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Giới thiệu
+              </h3>
+              <p className="mt-1.5 whitespace-pre-line text-sm text-slate-700">{profile.bio}</p>
+            </div>
+          )}
+
+          {isStudent && (
+            <div className="border-t border-slate-100 pt-4">
+              <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+                <FileText className="h-3.5 w-3.5" />
+                <span>Nội dung CV (FR-11)</span>
+              </h3>
+              {profile?.cvContent ? (
+                <div className="mt-2 rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-700 whitespace-pre-line">
+                  {profile.cvContent}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs italic text-slate-400">
+                  Bạn chưa cập nhật nội dung CV cá nhân.
+                </p>
+              )}
+            </div>
+          )}
+        </aside>
+
+        {/* Cột phải: Form cập nhật hồ sơ cá nhân PUT /api/v1/profiles/me */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <h2 className="mb-4 text-lg font-bold text-slate-900">
+            Cập nhật thông tin hồ sơ
+          </h2>
+
+          {/* Thông báo lỗi khi Submit (Error State) */}
+          {submitError && (
+            <div
+              role="alert"
+              className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+            >
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                <div className="flex-1">
+                  <p className="font-semibold">{submitError.message}</p>
+                  {submitError.errors?.length > 0 && (
+                    <ul className="mt-1.5 list-inside list-disc space-y-1 text-xs text-red-700">
+                      {submitError.errors.map((err, idx) => (
+                        <li key={idx}>{err.message}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="mt-2 flex items-center justify-between border-t border-red-200/70 pt-2 text-xs text-red-600">
+                    <span>RequestId: {submitError.requestId}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSubmitError(null)}
+                      className="font-semibold underline hover:text-red-800"
+                    >
+                      Đóng & Thử lại
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Thông báo cập nhật thành công */}
+          {successToast && (
+            <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+              <span>{successToast}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="fullName"
+                  className="mb-1.5 block text-sm font-semibold text-slate-700"
+                >
+                  {isEmployer ? 'Họ và tên người đại diện *' : 'Họ và tên *'}
+                </label>
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  required
+                  disabled={isSubmitting}
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 disabled:bg-slate-100"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="mb-1.5 block text-sm font-semibold text-slate-700"
+                >
+                  Số điện thoại liên hệ
+                </label>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  disabled={isSubmitting}
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="Ví dụ: 0914333444"
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 disabled:bg-slate-100"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="locationId"
+                className="mb-1.5 block text-sm font-semibold text-slate-700"
+              >
+                Khu vực sinh sống / làm việc
+              </label>
+              <select
+                id="locationId"
+                name="locationId"
+                disabled={isSubmitting}
+                value={formData.locationId}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 disabled:bg-slate-100"
+              >
+                <option value="">-- Chọn Quận / Huyện --</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.district}, {loc.city}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Khối thông tin dành riêng cho Sinh viên (FR-11) */}
+            {isStudent && (
+              <>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="school"
+                      className="mb-1.5 block text-sm font-semibold text-slate-700"
+                    >
+                      Trường đại học / cao đẳng
+                    </label>
+                    <input
+                      id="school"
+                      name="school"
+                      type="text"
+                      disabled={isSubmitting}
+                      value={formData.school}
+                      onChange={handleChange}
+                      placeholder="Ví dụ: Đại học Văn Lang"
+                      className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 disabled:bg-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="major"
+                      className="mb-1.5 block text-sm font-semibold text-slate-700"
+                    >
+                      Chuyên ngành đào tạo
+                    </label>
+                    <input
+                      id="major"
+                      name="major"
+                      type="text"
+                      disabled={isSubmitting}
+                      value={formData.major}
+                      onChange={handleChange}
+                      placeholder="Ví dụ: Công nghệ phần mềm"
+                      className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 disabled:bg-slate-100"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="cvContent"
+                    className="mb-1.5 block text-sm font-semibold text-slate-700"
+                  >
+                    Nội dung CV & Kỹ năng làm việc (FR-11)
+                  </label>
+                  <textarea
+                    id="cvContent"
+                    name="cvContent"
+                    rows={5}
+                    disabled={isSubmitting}
+                    value={formData.cvContent}
+                    onChange={handleChange}
+                    placeholder="Mô tả kỹ năng chuyên môn, kinh nghiệm làm thêm, ngoại ngữ và khung giờ rảnh trong tuần..."
+                    className="w-full rounded-xl border border-slate-300 p-3.5 text-sm focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 disabled:bg-slate-100"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Khối thông tin dành riêng cho Nhà tuyển dụng (FR-16) */}
+            {isEmployer && (
+              <div>
+                <label
+                  htmlFor="companyName"
+                  className="mb-1.5 block text-sm font-semibold text-slate-700"
+                >
+                  Tên Doanh nghiệp / Cửa hàng / Đơn vị tuyển dụng (FR-16)
+                </label>
+                <input
+                  id="companyName"
+                  name="companyName"
+                  type="text"
+                  disabled={isSubmitting}
+                  value={formData.companyName}
+                  onChange={handleChange}
+                  placeholder="Ví dụ: Chuỗi Cafe Góc Phố"
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 disabled:bg-slate-100"
+                />
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="bio" className="mb-1.5 block text-sm font-semibold text-slate-700">
+                {isEmployer ? 'Giới thiệu về đơn vị tuyển dụng' : 'Giới thiệu bản thân'}
+              </label>
+              <textarea
+                id="bio"
+                name="bio"
+                rows={3}
+                disabled={isSubmitting}
+                value={formData.bio}
+                onChange={handleChange}
+                placeholder={
+                  isEmployer
+                    ? 'Giới thiệu môi trường làm việc, lĩnh vực kinh doanh của đơn vị...'
+                    : 'Giới thiệu ngắn gọn mục tiêu công việc và điểm mạnh của bản thân...'
+                }
+                className="w-full rounded-xl border border-slate-300 p-3.5 text-sm focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600/20 disabled:bg-slate-100"
+              />
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Đang lưu hồ sơ...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>Lưu hồ sơ cá nhân</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
+  );
+};
+
+export default ProfilePage;
