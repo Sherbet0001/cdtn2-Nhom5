@@ -20,10 +20,22 @@ Thumbs.db
 antigravityrules
 *.log
 
-# Environment variables (Tuyệt đối không commit thông tin nhạy cảm)
+# Environment variables & Sensitive files (Tuyệt đối không commit thông tin nhạy cảm / mật khẩu)
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
-backend/.env
-frontend/.env
-
+!backend/.env.example
+!frontend/.env.example
+**/application-local.properties
+**/application-secret.properties
+**/application-prod.properties
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*credentials*
+*secret*
+!src/**

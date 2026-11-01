@@ -4,6 +4,19 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### Environment & Sensitive Config ###
+.env
+.env.*
+!.env.example
+src/main/resources/application-local.properties
+src/main/resources/application-secret.properties
+src/main/resources/application-prod.properties
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+
 ### STS ###
 .apt_generated
 .classpath

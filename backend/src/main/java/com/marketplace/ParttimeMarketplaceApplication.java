@@ -29,30 +29,18 @@ public class ParttimeMarketplaceApplication {
 		String port = System.getenv().getOrDefault("DB_PORT", "3306");
 		String dbName = System.getenv().getOrDefault("DB_NAME", "parttime_db");
 		String user = System.getenv().getOrDefault("DB_USERNAME", "root");
-		String envPass = System.getenv("DB_PASSWORD");
+		String password = System.getenv().getOrDefault("DB_PASSWORD", "");
 
 		String url = String.format(
 				"jdbc:mysql://%s:%s/%s?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8&connectTimeout=1500",
 				host, port, dbName
 		);
 
-		String[] candidatePasswords = (envPass != null)
-				? new String[]{envPass}
-				: new String[]{"123456", "", "root", "admin"};
-
-		for (String password : candidatePasswords) {
-			try (Connection conn = DriverManager.getConnection(url, user, password)) {
-				if (conn.isValid(2)) {
-					System.setProperty("spring.datasource.url", url);
-					System.setProperty("spring.datasource.username", user);
-					System.setProperty("spring.datasource.password", password);
-					return true;
-				}
-			} catch (Exception ignored) {
-				// Thử mật khẩu tiếp theo hoặc chuyển sang profile h2
-			}
+		try (Connection conn = DriverManager.getConnection(url, user, password)) {
+			return conn.isValid(2);
+		} catch (Exception ignored) {
+			return false;
 		}
-		return false;
 	}
 
 }
