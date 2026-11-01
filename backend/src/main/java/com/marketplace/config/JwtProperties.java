@@ -1,10 +1,12 @@
 package com.marketplace.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
 /**
  * Cấu hình thuộc tính JWT cho ứng dụng, ánh xạ tiền tố "app.jwt" từ application.properties.
  */
+@Component
 @ConfigurationProperties(prefix = "app.jwt")
 public class JwtProperties {
 
