@@ -1,0 +1,21 @@
+# Compiled output & dependencies
+**/target/
+**/build/
+**/dist/
+**/node_modules/
+
+# IDE & Editor files
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+
+# System & rules
+.DS_Store
+Thumbs.db
+antigravityrules
+*.log
