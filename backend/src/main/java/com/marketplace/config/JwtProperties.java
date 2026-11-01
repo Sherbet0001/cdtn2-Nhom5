@@ -1,15 +1,11 @@
 package com.marketplace.config;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Cấu hình thuộc tính JWT cho ứng dụng, ánh xạ tiền tố "app.jwt" từ application.properties.
  */
-@ConfigurationProperties("app.jwt")
-@Getter
-@Setter
+@ConfigurationProperties(prefix = "app.jwt")
 public class JwtProperties {
 
     /**
@@ -21,5 +17,20 @@ public class JwtProperties {
      * Thời hạn hiệu lực của JWT Token tính bằng giây (Mặc định 7200 giây = 2 giờ).
      */
     private long expirationSeconds = 7200;
-}
 
+    public String getSecret() {
+        return secret;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
+    }
+
+    public long getExpirationSeconds() {
+        return expirationSeconds;
+    }
+
+    public void setExpirationSeconds(long expirationSeconds) {
+        this.expirationSeconds = expirationSeconds;
+    }
+}

@@ -3,11 +3,9 @@ package com.marketplace;
 import com.marketplace.config.JwtProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@ConfigurationPropertiesScan
 @EnableConfigurationProperties(JwtProperties.class)
 public class ParttimeMarketplaceApplication {
 

@@ -99,3 +99,4 @@ class MySqlConfigurationIntegrationTests {
         assertThat(profileRepository.count()).isGreaterThanOrEqualTo(6);
     }
 }
+
