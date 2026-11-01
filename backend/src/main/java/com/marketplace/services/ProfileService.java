@@ -1,0 +1,148 @@
+package com.marketplace.services;
+
+import com.marketplace.dtos.ProfileResponse;
+import com.marketplace.dtos.UpdateProfileRequest;
+import com.marketplace.entities.Location;
+import com.marketplace.entities.Profile;
+import com.marketplace.entities.User;
+import com.marketplace.entities.UserRole;
+import com.marketplace.exceptions.AppException;
+import com.marketplace.repositories.LocationRepository;
+import com.marketplace.repositories.ProfileRepository;
+import com.marketplace.repositories.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Dịch vụ xử lý nghiệp vụ Hồ sơ cá nhân cho Sinh viên (FR-05, FR-11) và Nhà tuyển dụng (FR-16).
+ */
+@Service
+@RequiredArgsConstructor
+public class ProfileService {
+
+    private final ProfileRepository profileRepository;
+    private final UserRepository userRepository;
+    private final LocationRepository locationRepository;
+
+    /**
+     * Lấy thông tin hồ sơ cá nhân của người dùng đang đăng nhập (FR-05, FR-16).
+     *
+     * @param currentUserId ID của người dùng hiện tại lấy từ JWT Principal
+     * @return Thông tin chi tiết hồ sơ cá nhân
+     * @throws AppException Mã lỗi USER_NOT_FOUND hoặc PROFILE_NOT_FOUND nếu không tìm thấy dữ liệu
+     */
+    @Transactional(readOnly = true)
+    public ProfileResponse getMyProfile(Long currentUserId) {
+        Profile profile = profileRepository.findByUserId(currentUserId)
+                .orElseThrow(() -> new AppException("PROFILE_NOT_FOUND", "Không tìm thấy hồ sơ cá nhân của người dùng"));
+        return mapToProfileResponse(profile);
+    }
+
+    /**
+     * Cập nhật thông tin hồ sơ cá nhân theo đúng vai trò:
+     * - Sinh viên (FR-11): Cập nhật trường học, chuyên ngành, CV dạng văn bản và giới thiệu bản thân.
+     * - Nhà tuyển dụng (FR-16): Cập nhật tên công ty/cửa hàng, người đại diện và giới thiệu đơn vị.
+     *
+     * @param currentUserId ID người dùng đang đăng nhập
+     * @param request       Dữ liệu cập nhật hồ sơ
+     * @return Hồ sơ cá nhân sau khi cập nhật
+     * @throws AppException Mã lỗi USER_NOT_FOUND hoặc LOCATION_NOT_FOUND nếu dữ liệu tham chiếu không tồn tại
+     */
+    @Transactional
+    public ProfileResponse updateMyProfile(Long currentUserId, UpdateProfileRequest request) {
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy tài khoản người dùng"));
+
+        // Resource Ownership Check: Chỉ lấy và cập nhật hồ sơ gắn với chính currentUserId
+        Profile profile = profileRepository.findByUserId(currentUserId)
+                .orElseGet(() -> Profile.builder().user(user).build());
+
+        // FR-05: Cập nhật thông tin chung cho mọi vai trò
+        profile.setFullName(request.getFullName().trim());
+        profile.setPhone(normalizeNullableText(request.getPhone()));
+        profile.setBio(normalizeNullableText(request.getBio()));
+
+        if (request.getLocationId() != null) {
+            Location location = locationRepository.findById(request.getLocationId())
+                    .orElseThrow(() -> new AppException("LOCATION_NOT_FOUND", "Địa điểm làm việc/sinh sống đã chọn không tồn tại"));
+            profile.setLocation(location);
+        } else {
+            profile.setLocation(null);
+        }
+
+        // Phân nhánh cập nhật theo đúng vai trò nghiệp vụ để bảo vệ tính toàn vẹn dữ liệu
+        if (isStudentRole(user)) {
+            // FR-11: Sinh viên cập nhật trường học, chuyên ngành và nội dung CV
+            profile.setSchool(normalizeNullableText(request.getSchool()));
+            profile.setMajor(normalizeNullableText(request.getMajor()));
+            profile.setCvContent(normalizeNullableText(request.getCvContent()));
+            profile.setCompanyName(null);
+        } else if (isEmployerRole(user)) {
+            // FR-16: Nhà tuyển dụng cập nhật thông tin doanh nghiệp / cửa hàng
+            profile.setCompanyName(normalizeNullableText(request.getCompanyName()));
+            profile.setSchool(null);
+            profile.setMajor(null);
+            profile.setCvContent(null);
+        } else {
+            // Quản trị viên (ADMIN)
+            profile.setCompanyName(normalizeNullableText(request.getCompanyName()));
+        }
+
+        Profile savedProfile = profileRepository.save(profile);
+        return mapToProfileResponse(savedProfile);
+    }
+
+    /**
+     * Kiểm tra người dùng có vai trò Sinh viên (STUDENT) hay không.
+     *
+     * @param user Thực thể người dùng
+     * @return true nếu là STUDENT
+     */
+    public boolean isStudentRole(User user) {
+        return user != null && user.getRole() == UserRole.STUDENT;
+    }
+
+    /**
+     * Kiểm tra người dùng có vai trò Nhà tuyển dụng (EMPLOYER) hay không.
+     *
+     * @param user Thực thể người dùng
+     * @return true nếu là EMPLOYER
+     */
+    public boolean isEmployerRole(User user) {
+        return user != null && user.getRole() == UserRole.EMPLOYER;
+    }
+
+    private String normalizeNullableText(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private ProfileResponse mapToProfileResponse(Profile profile) {
+        User user = profile.getUser();
+        Location location = profile.getLocation();
+        String locationName = location != null
+                ? location.getDistrict() + ", " + location.getCity()
+                : null;
+
+        return ProfileResponse.builder()
+                .id(profile.getId())
+                .userId(user.getId())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .status(user.getStatus().name())
+                .fullName(profile.getFullName())
+                .phone(profile.getPhone())
+                .locationId(location != null ? location.getId() : null)
+                .locationName(locationName)
+                .bio(profile.getBio())
+                .school(profile.getSchool())
+                .major(profile.getMajor())
+                .cvContent(profile.getCvContent())
+                .companyName(profile.getCompanyName())
+                .updatedAt(profile.getUpdatedAt())
+                .build();
+    }
+}
