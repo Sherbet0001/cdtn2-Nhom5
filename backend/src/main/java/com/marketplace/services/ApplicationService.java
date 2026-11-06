@@ -168,13 +168,15 @@ public class ApplicationService {
 
         ApplicationStatus targetStatus = ApplicationStatus.valueOf(request.getStatus().trim().toUpperCase());
 
-        // QT-APP (FR-21): Kiểm tra không cho phép số lượng ACCEPTED vượt quá chỉ tiêu slots của tin tuyển dụng
+        // QT-APP (FR-21): Khóa bi quan bản ghi Job và kiểm tra không cho phép số lượng ACCEPTED vượt quá chỉ tiêu slots
         if (targetStatus == ApplicationStatus.ACCEPTED) {
-            long currentAccepted = applicationRepository.countByJobIdAndStatus(job.getId(), ApplicationStatus.ACCEPTED);
-            if (currentAccepted >= job.getSlots()) {
+            Job lockedJob = jobRepository.findByIdForUpdate(job.getId())
+                    .orElseThrow(() -> new AppException("JOB_NOT_FOUND", "Không tìm thấy tin tuyển dụng"));
+            long currentAccepted = applicationRepository.countByJobIdAndStatus(lockedJob.getId(), ApplicationStatus.ACCEPTED);
+            if (currentAccepted >= lockedJob.getSlots()) {
                 throw new AppException(
                         "SLOTS_EXCEEDED",
-                        "Số lượng ứng viên được chấp nhận đã đạt tối đa chỉ tiêu (" + job.getSlots() + " slots) của tin tuyển dụng"
+                        "Số lượng ứng viên được chấp nhận đã đạt tối đa chỉ tiêu (" + lockedJob.getSlots() + " slots) của tin tuyển dụng"
                 );
             }
         }

@@ -52,6 +52,8 @@ public class JobService {
     private final ApplicationRepository applicationRepository;
     private final DataSource dataSource;
 
+    private volatile Boolean isMySqlCache;
+
     /**
      * Đăng tin tuyển dụng việc làm part-time mới cho Nhà tuyển dụng (FR-17).
      *
@@ -126,6 +128,14 @@ public class JobService {
         }
 
         validateJobBusinessConstraints(request);
+
+        long acceptedCount = applicationRepository.countByJobIdAndStatus(jobId, ApplicationStatus.ACCEPTED);
+        if (request.getSlots() < acceptedCount) {
+            throw new AppException(
+                    "SLOTS_EXCEEDED",
+                    "Số lượng tuyển (slots) không được nhỏ hơn số lượng ứng viên đã được chấp nhận (" + acceptedCount + ")"
+            );
+        }
 
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new AppException("CATEGORY_NOT_FOUND", "Danh mục ngành nghề không tồn tại"));
@@ -216,11 +226,7 @@ public class JobService {
         // FR-08: Khi có keyword trên MySQL 8.0, ưu tiên thực thi Native Query FULLTEXT MATCH ... AGAINST trước
         if (trimmedKeyword != null && isMySqlDatabase()) {
             try {
-                Pageable nativePageable = PageRequest.of(
-                        safePage,
-                        safeSize,
-                        Sort.by(Sort.Direction.DESC, "created_at")
-                );
+                Pageable nativePageable = PageRequest.of(safePage, safeSize);
                 Page<Job> fullTextPage = jobRepository.searchOpenJobsFullText(
                         trimmedKeyword,
                         categoryId,
@@ -230,11 +236,15 @@ public class JobService {
                         nativePageable
                 );
                 if (fullTextPage.hasContent()) {
+                    List<Long> ids = fullTextPage.getContent().stream().map(Job::getId).toList();
+                    jobRepository.findAllWithDetailsByIdIn(ids);
                     List<JobResponse> mapped = fullTextPage.getContent()
                             .stream()
                             .map(job -> mapToJobResponse(job, null))
                             .collect(Collectors.toList());
                     return PageResponse.fromPage(fullTextPage, mapped);
+                } else if (trimmedKeyword.length() >= 3) {
+                    return PageResponse.fromPage(fullTextPage, List.of());
                 }
             } catch (Exception ignored) {
                 // Tự động chuyển sang JPA Specification nếu từ khóa đặc biệt không khớp cú pháp FULLTEXT
@@ -339,9 +349,15 @@ public class JobService {
     }
 
     private boolean isMySqlDatabase() {
+        Boolean cached = this.isMySqlCache;
+        if (cached != null) {
+            return cached;
+        }
         try (Connection connection = dataSource.getConnection()) {
             String productName = connection.getMetaData().getDatabaseProductName();
-            return productName != null && productName.toLowerCase().contains("mysql");
+            boolean result = productName != null && productName.toLowerCase().contains("mysql");
+            this.isMySqlCache = result;
+            return result;
         } catch (Exception ex) {
             return false;
         }
