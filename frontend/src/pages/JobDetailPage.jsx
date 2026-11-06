@@ -16,16 +16,9 @@ import {
   Send,
   Users,
 } from 'lucide-react';
-import { formatVnd } from '../components/JobCard';
+import { formatVnd, SALARY_UNIT_LABELS } from '../components/JobCard';
 import { useAuth } from '../contexts/AuthContext';
 import jobService from '../services/jobService';
-
-const SALARY_UNIT_LABELS = {
-  HOUR: 'giờ',
-  DAY: 'ngày',
-  MONTH: 'tháng',
-  TASK: 'dự án/ca',
-};
 
 const JobDetailPage = () => {
   const { id } = useParams();

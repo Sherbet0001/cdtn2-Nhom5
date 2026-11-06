@@ -19,9 +19,12 @@ import com.marketplace.repositories.JobRepository;
 import com.marketplace.repositories.LocationRepository;
 import com.marketplace.repositories.ProfileRepository;
 import com.marketplace.repositories.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,7 +36,11 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -51,6 +58,7 @@ public class JobService {
     private final LocationRepository locationRepository;
     private final ApplicationRepository applicationRepository;
     private final DataSource dataSource;
+    private final EntityManager entityManager;
 
     private volatile Boolean isMySqlCache;
 
@@ -99,18 +107,18 @@ public class JobService {
                 .build();
 
         Job savedJob = jobRepository.save(job);
-        return mapToJobResponse(savedJob, null);
+        Profile employerProfile = profileRepository.findByUserId(employer.getId()).orElse(null);
+        return mapToJobResponse(savedJob, employerProfile, null);
     }
 
     /**
      * Cập nhật nội dung tin tuyển dụng thuộc sở hữu của Nhà tuyển dụng (FR-18).
-     * Không cho phép cập nhật khi tin đã ở trạng thái COMPLETED hoặc CLOSED.
+     * Không cho phép cập nhật khi tin đã ở trạng thái COMPLETED hoặc CLOSED, hoặc giảm slots nhỏ hơn số ứng viên đã ACCEPTED.
      *
      * @param employerId ID của Nhà tuyển dụng đang đăng nhập
      * @param jobId      ID tin tuyển dụng cần cập nhật
      * @param request    Dữ liệu cập nhật
      * @return Thông tin tin tuyển dụng sau khi cập nhật
-     * @throws AppException Mã lỗi JOB_NOT_FOUND (404), FORBIDDEN_RESOURCE (403) nếu không phải chủ tin, hoặc INVALID_STATUS_TRANSITION (409) nếu tin đã COMPLETED
      */
     @Transactional
     public JobResponse updateJob(Long employerId, Long jobId, CreateJobRequest request) {
@@ -156,11 +164,12 @@ public class JobService {
         job.setSlots(request.getSlots());
 
         Job updatedJob = jobRepository.save(job);
-        return mapToJobResponse(updatedJob, null);
+        Profile employerProfile = profileRepository.findByUserId(updatedJob.getEmployer().getId()).orElse(null);
+        return mapToJobResponse(updatedJob, employerProfile, null);
     }
 
     /**
-     * Lấy danh sách tin tuyển dụng do chính Nhà tuyển dụng đang đăng nhập tạo ra (FR-20).
+     * Lấy danh sách tin tuyển dụng do chính Nhà tuyển dụng đang đăng nhập tạo ra (FR-18).
      *
      * @param employerId ID của Nhà tuyển dụng
      * @param page       Số trang (bắt đầu từ 0)
@@ -176,29 +185,15 @@ public class JobService {
         );
 
         Page<Job> jobPage = jobRepository.findByEmployerId(employerId, pageable);
-        List<JobResponse> content = jobPage.getContent()
-                .stream()
-                .map(job -> mapToJobResponse(job, null))
-                .collect(Collectors.toList());
-
+        List<JobResponse> content = mapJobListToResponses(jobPage.getContent());
         return PageResponse.fromPage(jobPage, content);
     }
 
     /**
      * Tìm kiếm và lọc danh sách việc làm đang mở tuyển (status = OPEN) kèm phân trang (FR-07, FR-08, FR-09).
      * - Từ khóa (keyword): Ưu tiên thực thi Native Query FULLTEXT MATCH(title, description) AGAINST(...) trên MySQL 8.0;
-     *   tự động chuyển sang Specification LIKE khi chạy trên CSDL nhúng H2 hoặc từ khóa ngắn.
+     *   tự động chuyển sang Specification LIKE khi chạy trên CSDL nhúng H2 hoặc từ khóa ngắn (< 3 ký tự).
      * - Mức lương tối thiểu (minSalary): Chỉ áp dụng khi đi kèm đơn vị tính lương (salaryUnit).
-     *
-     * @param keyword    Từ khóa tìm kiếm trên tiêu đề và mô tả
-     * @param categoryId ID danh mục ngành nghề
-     * @param locationId ID địa điểm làm việc
-     * @param minSalary  Mức lương tối thiểu mong muốn
-     * @param salaryUnit Đơn vị tính lương đi kèm minSalary (HOUR, DAY, MONTH, TASK)
-     * @param page       Trang hiện tại (mặc định 0)
-     * @param size       Kích thước trang (mặc định 10)
-     * @param sortParam  Chuỗi sắp xếp (ví dụ: createdAt,desc)
-     * @return Trang kết quả việc làm chuẩn { content, page, size, totalElements, totalPages }
      */
     @Transactional(readOnly = true)
     public PageResponse<JobResponse> searchOpenJobs(
@@ -223,28 +218,23 @@ public class JobService {
             effectiveMinSalary = minSalary;
         }
 
-        // FR-08: Khi có keyword trên MySQL 8.0, ưu tiên thực thi Native Query FULLTEXT MATCH ... AGAINST trước
+        // FR-08: Khi có keyword trên MySQL 8.0, thực thi Native Query FULLTEXT MATCH(title, description) AGAINST(...)
         if (trimmedKeyword != null && isMySqlDatabase()) {
             try {
-                Pageable nativePageable = PageRequest.of(safePage, safeSize);
-                Page<Job> fullTextPage = jobRepository.searchOpenJobsFullText(
+                Page<Job> fullTextPage = executeMySqlFullTextSearch(
                         trimmedKeyword,
                         categoryId,
                         locationId,
                         effectiveMinSalary,
                         parsedUnit != null ? parsedUnit.name() : null,
-                        nativePageable
+                        safePage,
+                        safeSize
                 );
                 if (fullTextPage.hasContent()) {
-                    List<Long> ids = fullTextPage.getContent().stream().map(Job::getId).toList();
-                    jobRepository.findAllWithDetailsByIdIn(ids);
-                    List<JobResponse> mapped = fullTextPage.getContent()
-                            .stream()
-                            .map(job -> mapToJobResponse(job, null))
-                            .collect(Collectors.toList());
+                    List<JobResponse> mapped = mapJobListToResponses(fullTextPage.getContent());
                     return PageResponse.fromPage(fullTextPage, mapped);
                 } else if (trimmedKeyword.length() >= 3) {
-                    return PageResponse.fromPage(fullTextPage, List.of());
+                    return PageResponse.fromPage(fullTextPage, Collections.emptyList());
                 }
             } catch (Exception ignored) {
                 // Tự động chuyển sang JPA Specification nếu từ khóa đặc biệt không khớp cú pháp FULLTEXT
@@ -284,51 +274,110 @@ public class JobService {
         };
 
         Page<Job> jobPage = jobRepository.findAll(spec, jpaPageable);
-        List<JobResponse> content = jobPage.getContent()
-                .stream()
-                .map(job -> mapToJobResponse(job, null))
-                .collect(Collectors.toList());
+        List<JobResponse> content = mapJobListToResponses(jobPage.getContent());
 
         return PageResponse.fromPage(jobPage, content);
     }
 
     /**
      * Xem thông tin chi tiết của một tin tuyển dụng (FR-10).
-     *
-     * @param jobId         ID tin tuyển dụng
-     * @param currentUserId ID người dùng đang xem (có thể null nếu chưa đăng nhập)
-     * @return Thông tin chi tiết tin tuyển dụng kèm trạng thái đã ứng tuyển (hasApplied)
-     * @throws AppException Mã lỗi JOB_NOT_FOUND (404) nếu không tìm thấy tin
+     * Chặn người dùng vãng lai hoặc sinh viên xem tin đã bị Admin ẩn (HIDDEN).
      */
     @Transactional(readOnly = true)
     public JobResponse getJobDetail(Long jobId, Long currentUserId) {
         Job job = jobRepository.findWithDetailsById(jobId)
                 .orElseThrow(() -> new AppException("JOB_NOT_FOUND", "Không tìm thấy tin tuyển dụng"));
 
-        return mapToJobResponse(job, currentUserId);
+        if (job.getStatus() == JobStatus.HIDDEN && !isJobOwnedByEmployer(job, currentUserId)) {
+            throw new AppException("JOB_NOT_FOUND", "Tin tuyển dụng không tồn tại hoặc đã bị ẩn");
+        }
+
+        Profile employerProfile = profileRepository.findByUserId(job.getEmployer().getId()).orElse(null);
+        return mapToJobResponse(job, employerProfile, currentUserId);
     }
 
     /**
      * Kiểm tra tin tuyển dụng có thuộc quyền sở hữu của Nhà tuyển dụng hay không.
-     *
-     * @param job        Thực thể tin tuyển dụng
-     * @param employerId ID của Nhà tuyển dụng
-     * @return true nếu job.employer.id == employerId
      */
     public boolean isJobOwnedByEmployer(Job job, Long employerId) {
-        return job != null && job.getEmployer() != null && job.getEmployer().getId().equals(employerId);
+        return job != null
+                && employerId != null
+                && job.getEmployer() != null
+                && job.getEmployer().getId().equals(employerId);
     }
 
     /**
      * Kiểm tra tin tuyển dụng có được phép chỉnh sửa nội dung hay không (chưa COMPLETED và chưa CLOSED).
-     *
-     * @param job Thực thể tin tuyển dụng
-     * @return true nếu trạng thái khác COMPLETED và CLOSED
      */
     public boolean canUpdateJob(Job job) {
         return job != null
                 && job.getStatus() != JobStatus.COMPLETED
                 && job.getStatus() != JobStatus.CLOSED;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Page<Job> executeMySqlFullTextSearch(
+            String keyword,
+            Long categoryId,
+            Long locationId,
+            BigDecimal minSalary,
+            String salaryUnit,
+            int page,
+            int size) {
+
+        String whereClause = " FROM tbl_jobs j " +
+                "WHERE j.status = 'OPEN' " +
+                "AND MATCH(j.title, j.description) AGAINST(:keyword IN NATURAL LANGUAGE MODE) " +
+                "AND (:categoryId IS NULL OR j.category_id = :categoryId) " +
+                "AND (:locationId IS NULL OR j.location_id = :locationId) " +
+                "AND (:salaryUnit IS NULL OR :minSalary IS NULL OR (j.salary_unit = :salaryUnit AND j.salary_max >= :minSalary))";
+
+        Query countQuery = entityManager.createNativeQuery("SELECT COUNT(*)" + whereClause);
+        bindFullTextParams(countQuery, keyword, categoryId, locationId, minSalary, salaryUnit);
+        long totalElements = ((Number) countQuery.getSingleResult()).longValue();
+
+        Pageable pageable = PageRequest.of(page, size);
+        if (totalElements == 0) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        Query idQuery = entityManager.createNativeQuery(
+                "SELECT j.id" + whereClause + " ORDER BY j.created_at DESC LIMIT :limit OFFSET :offset"
+        );
+        bindFullTextParams(idQuery, keyword, categoryId, locationId, minSalary, salaryUnit);
+        idQuery.setParameter("limit", size);
+        idQuery.setParameter("offset", page * size);
+
+        List<Number> rawIds = idQuery.getResultList();
+        List<Long> jobIds = rawIds.stream().map(Number::longValue).toList();
+        if (jobIds.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, totalElements);
+        }
+
+        Map<Long, Job> jobsById = jobRepository.findAllWithDetailsByIdIn(jobIds)
+                .stream()
+                .collect(Collectors.toMap(Job::getId, Function.identity()));
+
+        List<Job> orderedJobs = jobIds.stream()
+                .map(jobsById::get)
+                .filter(j -> j != null)
+                .toList();
+
+        return new PageImpl<>(orderedJobs, pageable, totalElements);
+    }
+
+    private void bindFullTextParams(
+            Query query,
+            String keyword,
+            Long categoryId,
+            Long locationId,
+            BigDecimal minSalary,
+            String salaryUnit) {
+        query.setParameter("keyword", keyword);
+        query.setParameter("categoryId", categoryId);
+        query.setParameter("locationId", locationId);
+        query.setParameter("minSalary", minSalary);
+        query.setParameter("salaryUnit", salaryUnit);
     }
 
     private void validateJobBusinessConstraints(CreateJobRequest request) {
@@ -378,9 +427,25 @@ public class JobService {
         return Sort.by(direction, property);
     }
 
-    private JobResponse mapToJobResponse(Job job, Long currentUserId) {
+    private List<JobResponse> mapJobListToResponses(List<Job> jobs) {
+        if (jobs == null || jobs.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<Long> employerIds = jobs.stream()
+                .map(j -> j.getEmployer().getId())
+                .collect(Collectors.toSet());
+
+        Map<Long, Profile> profilesByUserId = profileRepository.findAllByUserIdIn(employerIds)
+                .stream()
+                .collect(Collectors.toMap(p -> p.getUser().getId(), Function.identity(), (a, b) -> a));
+
+        return jobs.stream()
+                .map(job -> mapToJobResponse(job, profilesByUserId.get(job.getEmployer().getId()), null))
+                .collect(Collectors.toList());
+    }
+
+    private JobResponse mapToJobResponse(Job job, Profile employerProfile, Long currentUserId) {
         User employer = job.getEmployer();
-        Profile employerProfile = profileRepository.findByUserId(employer.getId()).orElse(null);
 
         String employerFullName = employerProfile != null ? employerProfile.getFullName() : employer.getEmail();
         String companyName = (employerProfile != null && employerProfile.getCompanyName() != null)
@@ -428,4 +493,3 @@ public class JobService {
                 .build();
     }
 }
-

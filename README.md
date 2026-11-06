@@ -9,29 +9,31 @@
 
 ---
 
-## 1. Cấu trúc thư mục dự án (Buổi 06 - Sprint 1)
+## 1. Cấu trúc thư mục dự án (Sprint 1 – Sprint 3)
 
 ```text
 cdtn2-Nhom5/
-├── backend/                  # Spring Boot 3.x (Java 17) + Spring Security + JPA + MySQL 8.0
+├── backend/                  # Spring Boot 3.4 (Java 17) + Spring Security + JPA + MySQL 8.0
 │   ├── src/main/java/com/marketplace/
-│   │   ├── controllers/      # AuthController, ProfileController, CatalogController
-│   │   ├── services/         # AuthService, ProfileService, CatalogService
-│   │   ├── repositories/     # UserRepository, ProfileRepository, CategoryRepository, LocationRepository
-│   │   ├── entities/         # User, Profile, Category, Location, UserRole, UserStatus
-│   │   ├── dtos/             # ApiResponse, RegisterRequest, LoginRequest, AuthResponse, ProfileResponse...
+│   │   ├── controllers/      # AuthController, ProfileController, CatalogController, JobController, ApplicationController
+│   │   ├── services/         # AuthService, ProfileService, CatalogService, JobService, ApplicationService
+│   │   ├── repositories/     # UserRepository, ProfileRepository, CategoryRepository, LocationRepository, JobRepository, ApplicationRepository, NotificationRepository
+│   │   ├── entities/         # User, Profile, Category, Location, Job, JobApplication, Notification...
+│   │   ├── dtos/             # ApiResponse, PageResponse, CreateJobRequest, JobResponse, ApplicationResponse...
 │   │   ├── security/         # SecurityConfig, JwtAuthenticationFilter, JwtProvider, UserPrincipal
 │   │   └── exceptions/       # AppException, GlobalExceptionHandler (@RestControllerAdvice)
 │   └── src/main/resources/
 │       ├── schema.sql        # Chuẩn hóa 8 bảng MySQL 8.0 (InnoDB, utf8mb4)
-│       ├── data.sql          # Dữ liệu mẫu: 8 ngành nghề, 10 địa điểm, 6 tài khoản kiểm thử
+│       ├── data.sql          # Dữ liệu mẫu: 8 ngành nghề, 10 địa điểm, 6 tài khoản, 4 việc làm, 1 đơn ứng tuyển
 │       └── application.properties
+├── database/                 # schema.sql + seed.sql (8 bảng chuẩn MySQL 8.0)
+├── docs/                     # Tài liệu thiết kế, Postman Collection & báo cáo Benchmark NFR-01
 └── frontend/                 # ReactJS 18 (Vite) + Tailwind CSS + Axios Interceptor
     └── src/
-        ├── services/         # axiosClient.js, authService.js, profileService.js
+        ├── services/         # axiosClient.js, authService.js, profileService.js, jobService.js
         ├── contexts/         # AuthContext.jsx
-        ├── components/       # Navbar.jsx
-        └── pages/            # RegisterPage.jsx (/register), LoginPage.jsx (/login), ProfilePage.jsx (/profile)
+        ├── components/       # Navbar.jsx, JobCard.jsx, FilterBar.jsx
+        └── pages/            # RegisterPage.jsx, LoginPage.jsx, ProfilePage.jsx, JobListPage.jsx, JobDetailPage.jsx, JobFormPage.jsx, EmployerJobsPage.jsx, JobApplicantsPage.jsx
 ```
 
 ---

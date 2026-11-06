@@ -2,6 +2,8 @@ package com.marketplace.exceptions;
 
 import com.marketplace.dtos.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -21,6 +23,8 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 @SuppressWarnings("null")
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ApiResponse<Void>> handleAppException(AppException ex, HttpServletRequest request) {
@@ -97,6 +101,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleUnexpectedException(
             Exception ex,
             HttpServletRequest request) {
+        log.error("Unhandled exception [path={}]: {}", request.getRequestURI(), ex.getMessage(), ex);
         // Không trả về stack trace hay thông tin nhạy cảm của CSDL ra ngoài Client
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         ApiResponse<Void> body = ApiResponse.error(

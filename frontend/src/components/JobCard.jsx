@@ -10,7 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 
-const SALARY_UNIT_LABELS = {
+export const SALARY_UNIT_LABELS = {
   HOUR: 'giờ',
   DAY: 'ngày',
   MONTH: 'tháng',
