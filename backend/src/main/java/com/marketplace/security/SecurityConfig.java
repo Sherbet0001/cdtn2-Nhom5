@@ -67,9 +67,15 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/locations").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/jobs/mine").hasRole("EMPLOYER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/jobs", "/api/v1/jobs/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/jobs").hasRole("EMPLOYER")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/jobs/*").hasRole("EMPLOYER")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/applications").hasRole("STUDENT")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/jobs/*/applications").hasRole("EMPLOYER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/applications/*/status").hasRole("EMPLOYER")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/employer/**").hasRole("EMPLOYER")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/jobs/**").hasRole("EMPLOYER")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

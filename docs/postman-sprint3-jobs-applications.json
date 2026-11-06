@@ -1,0 +1,196 @@
+{
+  "info": {
+    "_postman_id": "sprint3-jobs-applications-collection",
+    "name": "VLU Part-time Marketplace - Sprint 3 (Catalog, Jobs, Applications)",
+    "description": "Bộ sưu tập Postman kiểm thử các endpoint Sprint 3: FR-07..10, FR-12, FR-17..22, NFR-01",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "employerToken",
+      "value": ""
+    },
+    {
+      "key": "studentToken",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Catalog - GET /categories (Public)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/categories",
+          "host": ["{{baseUrl}}"],
+          "path": ["categories"]
+        }
+      }
+    },
+    {
+      "name": "2. Catalog - GET /locations (Public)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/locations",
+          "host": ["{{baseUrl}}"],
+          "path": ["locations"]
+        }
+      }
+    },
+    {
+      "name": "3. Jobs - GET /jobs (FR-07, FR-08, FR-09 Search & Filter)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/jobs?keyword=ReactJS&categoryId=6&locationId=5&minSalary=30000&salaryUnit=HOUR&page=0&size=10&sort=createdAt,desc",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs"],
+          "query": [
+            { "key": "keyword", "value": "ReactJS" },
+            { "key": "categoryId", "value": "6" },
+            { "key": "locationId", "value": "5" },
+            { "key": "minSalary", "value": "30000" },
+            { "key": "salaryUnit", "value": "HOUR" },
+            { "key": "page", "value": "0" },
+            { "key": "size", "value": "10" },
+            { "key": "sort", "value": "createdAt,desc" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Jobs - GET /jobs/{id} (FR-10 Chi tiết tin)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/jobs/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs", "1"]
+        }
+      }
+    },
+    {
+      "name": "5. Jobs - POST /jobs (FR-17 NTD Đăng tin mới)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{employerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Nhân viên Pha chế Ca Tối\",\n  \"description\": \"Pha chế cà phê và trà trái cây theo công thức chuẩn, dọn dẹp quầy bar cuối ca.\",\n  \"categoryId\": 1,\n  \"locationId\": 3,\n  \"salaryMin\": 28000,\n  \"salaryMax\": 35000,\n  \"salaryUnit\": \"HOUR\",\n  \"workSchedule\": \"Ca tối 18:00 - 22:30 (4 buổi/tuần)\",\n  \"startDate\": \"2026-05-01\",\n  \"endDate\": \"2026-08-31\",\n  \"slots\": 2\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/jobs",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs"]
+        }
+      }
+    },
+    {
+      "name": "6. Jobs - GET /jobs/mine (FR-18 Danh sách tin của NTD)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{employerToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/jobs/mine?page=0&size=10&sort=createdAt,desc",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs", "mine"],
+          "query": [
+            { "key": "page", "value": "0" },
+            { "key": "size", "value": "10" },
+            { "key": "sort", "value": "createdAt,desc" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "7. Jobs - PUT /jobs/{id} (FR-19 NTD Cập nhật tin chưa COMPLETED)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{employerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Nhân viên Pha chế & Phục vụ Ca Tối (Updated)\",\n  \"description\": \"Cập nhật mô tả công việc và nâng mức lương theo giờ.\",\n  \"categoryId\": 1,\n  \"locationId\": 3,\n  \"salaryMin\": 30000,\n  \"salaryMax\": 38000,\n  \"salaryUnit\": \"HOUR\",\n  \"workSchedule\": \"Ca tối 18:00 - 22:30\",\n  \"startDate\": \"2026-05-01\",\n  \"endDate\": \"2026-08-31\",\n  \"slots\": 3\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/jobs/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs", "1"]
+        }
+      }
+    },
+    {
+      "name": "8. Applications - POST /jobs/{jobId}/applications (FR-12 SV Ứng tuyển)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"coverLetter\": \"Em là sinh viên năm 3 ngành CNTT ĐH Văn Lang, đã có dự án ReactJS và có thể đi làm ngay.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/jobs/2/applications",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs", "2", "applications"]
+        }
+      }
+    },
+    {
+      "name": "9. Applications - GET /jobs/{jobId}/applications (FR-20 NTD Xem ứng viên)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{employerToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/jobs/1/applications?page=0&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs", "1", "applications"],
+          "query": [
+            { "key": "page", "value": "0" },
+            { "key": "size", "value": "10" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Applications - PATCH /applications/{id}/status (FR-21/22 Duyệt/Từ chối hồ sơ)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{employerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"ACCEPTED\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/applications/1/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["applications", "1", "status"]
+        }
+      }
+    }
+  ]
+}
+

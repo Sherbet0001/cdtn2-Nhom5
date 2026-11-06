@@ -33,11 +33,10 @@ const LoginPage = () => {
   };
 
   const handleRoleRedirect = (role) => {
-    // Chuyển hướng theo vai trò kèm thông báo ngữ cảnh trên trang Hồ sơ
     if (role === 'STUDENT') {
-      navigate('/profile?role=student');
+      navigate('/jobs');
     } else if (role === 'EMPLOYER') {
-      navigate('/profile?role=employer');
+      navigate('/employer/jobs');
     } else {
       navigate('/profile?role=admin');
     }

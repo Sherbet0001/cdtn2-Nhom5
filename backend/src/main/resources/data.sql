@@ -1,5 +1,5 @@
 -- ==============================================================================
--- DATA.SQL - DỮ LIỆU MẪU CHUẨN CHO SPRINT 1 & 2 (DANH MỤC, ĐỊA ĐIỂM, TÀI KHOẢN, ĐƠN MẪU)
+-- DATA.SQL - DỮ LIỆU MẪU CHUẨN CHO SPRINT 1, 2 & 3 (DANH MỤC, ĐỊA ĐIỂM, TÀI KHOẢN, VIỆC LÀM, ĐƠN ỨNG TUYỂN)
 -- Mật khẩu mặc định của tất cả tài khoản mẫu: Abc@12345 (BCrypt Hash)
 -- ==============================================================================
 
@@ -46,10 +46,12 @@ INSERT IGNORE INTO tbl_profiles (id, user_id, full_name, phone, location_id, bio
 (5, 5, 'Phạm Minh Châu', '0915444555', 5, 'Sinh viên năng động, giao tiếp tốt, mong muốn tìm công việc part-time lĩnh vực công nghệ hoặc phục vụ.', 'Đại học Văn Lang', 'Công nghệ thông tin', 'Kỹ năng: SQL, RESTful API, Giao tiếp tiếng Anh cơ bản. Kinh nghiệm: Phục vụ sự kiện tại trường Đại học Văn Lang. Thời gian rảnh: Chiều Thứ 3, Thứ 5, Thứ 7, CN.', NULL, '2026-10-05 14:00:00'),
 (6, 6, 'Võ Quốc Bảo', '0916555666', 1, 'Sinh viên yêu thích Frontend & UI/UX, từng tham gia hỗ trợ truyền thông sự kiện khoa CNTT.', 'Đại học Văn Lang', 'Công nghệ phần mềm', 'Kỹ năng: ReactJS, Tailwind CSS, Figma, Chụp ảnh sự kiện. Kinh nghiệm: Cộng tác viên thiết kế ấn phẩm CLB. Thời gian rảnh: Các buổi tối trong tuần.', NULL, '2026-10-06 15:30:00');
 
--- 5. Dữ liệu mẫu tin tuyển dụng & đơn ứng tuyển để kiểm thử quyền NTD xem hồ sơ ứng viên (GET /api/v1/profiles/{userId})
--- NTD 2 (hr@cafegocpho.vn) sở hữu job_id = 1; Sinh viên 4 (sv1@vanlanguni.vn) đã nộp đơn vào job_id = 1, còn Sinh viên 5 (sv2@vanlanguni.vn) chưa nộp.
+-- 5. Dữ liệu mẫu tin tuyển dụng (tbl_jobs) và đơn ứng tuyển (tbl_applications)
 INSERT IGNORE INTO tbl_jobs (id, employer_id, category_id, location_id, title, description, salary_min, salary_max, salary_unit, work_schedule, start_date, end_date, slots, status, created_at, updated_at) VALUES
-(1, 2, 1, 3, 'Nhân viên pha chế & phục vụ ca tối tại Cafe Góc Phố', 'Pha chế đồ uống cơ bản, đón tiếp khách hàng và giữ vệ sinh quầy pha chế ca 18h-22h.', 28000, 35000, 'HOUR', '18:00 - 22:00 (Thứ 2 - Thứ 6)', '2026-11-10', '2026-12-31', 2, 'OPEN', '2026-10-10 09:00:00', '2026-10-10 09:00:00');
+(1, 2, 1, 3, 'Nhân viên pha chế & phục vụ ca tối tại Cafe Góc Phố', 'Pha chế đồ uống cơ bản, đón tiếp khách hàng và giữ vệ sinh quầy pha chế ca 18h-22h.', 28000, 35000, 'HOUR', '18:00 - 22:00 (Thứ 2 - Thứ 6)', '2026-11-10', '2026-12-31', 2, 'OPEN', '2026-10-10 09:00:00', '2026-10-10 09:00:00'),
+(2, 3, 2, 5, 'Trợ giảng lớp Lập trình & Tiếng Anh giao tiếp cuối tuần', 'Hỗ trợ giảng viên chấm bài, hướng dẫn học viên thực hành trên máy tính và điểm danh lớp học.', 45000, 60000, 'HOUR', '08:00 - 11:30 (Thứ 7 & Chủ nhật)', '2026-11-15', '2026-12-31', 3, 'OPEN', '2026-10-12 10:00:00', '2026-10-12 10:00:00'),
+(3, 2, 5, 6, 'Cộng tác viên Thiết kế Banner & Chụp ảnh menu đồ uống', 'Thiết kế bộ banner fanpage cho chiến dịch mùa lễ hội và chụp ảnh sản phẩm tại quán.', 800000, 1500000, 'TASK', 'Linh hoạt theo tiến độ bàn giao', '2026-11-12', '2026-12-15', 1, 'OPEN', '2026-10-14 14:00:00', '2026-10-14 14:00:00'),
+(4, 3, 6, 1, 'Thực tập sinh Part-time hỗ trợ kiểm thử Website Giáo dục', 'Thực hiện kiểm thử giao diện web trên Chrome, ghi nhận lỗi và phối hợp cùng nhóm phát triển.', 3500000, 5000000, 'MONTH', '4 buổi/tuần (linh hoạt theo lịch học)', '2026-11-20', '2027-01-31', 2, 'OPEN', '2026-10-15 16:00:00', '2026-10-15 16:00:00');
 
 INSERT IGNORE INTO tbl_applications (id, job_id, student_id, cover_letter, status, applied_at, updated_at) VALUES
 (1, 1, 4, 'Em có kinh nghiệm giao tiếp và rảnh tất cả các buổi tối trong tuần, mong anh/chị xem xét hồ sơ.', 'PENDING', '2026-10-11 10:00:00', '2026-10-11 10:00:00');
