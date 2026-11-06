@@ -58,6 +58,14 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/profiles/:userId"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -66,4 +74,3 @@ const App = () => {
 };
 
 export default App;
-

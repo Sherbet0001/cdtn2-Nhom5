@@ -41,6 +41,44 @@ public class ProfileService {
     }
 
     /**
+     * Xem hồ sơ cá nhân của người dùng theo userId (dành cho EMPLOYER và ADMIN):
+     * - ADMIN: Được phép xem hồ sơ của mọi người dùng.
+     * - EMPLOYER: Chỉ được xem hồ sơ của Sinh viên đã ứng tuyển vào tin tuyển dụng do chính NTD đó sở hữu (hoặc tự xem chính mình).
+     *
+     * @param viewerId     ID người đang thực hiện xem (lấy từ JWT)
+     * @param viewerRole   Vai trò của người xem (EMPLOYER hoặc ADMIN)
+     * @param targetUserId ID người dùng cần xem hồ sơ
+     * @return Thông tin chi tiết hồ sơ của người dùng
+     * @throws AppException Mã lỗi FORBIDDEN_RESOURCE (403) nếu không đủ quyền sở hữu, hoặc PROFILE_NOT_FOUND (404) nếu không tồn tại
+     */
+    @Transactional(readOnly = true)
+    public ProfileResponse getUserProfileById(Long viewerId, String viewerRole, Long targetUserId) {
+        Profile targetProfile = profileRepository.findByUserId(targetUserId)
+                .orElseThrow(() -> new AppException("PROFILE_NOT_FOUND", "Không tìm thấy hồ sơ cá nhân của người dùng"));
+
+        // FR-04 & QT-AUTH: Phân quyền tầng 2 (Resource Ownership Check) cho Nhà tuyển dụng
+        if (UserRole.ADMIN.name().equals(viewerRole)) {
+            return mapToProfileResponse(targetProfile);
+        }
+
+        if (UserRole.EMPLOYER.name().equals(viewerRole)) {
+            if (viewerId.equals(targetUserId)) {
+                return mapToProfileResponse(targetProfile);
+            }
+            User targetUser = targetProfile.getUser();
+            if (!isStudentRole(targetUser) || !hasStudentAppliedToEmployerJobs(targetUserId, viewerId)) {
+                throw new AppException(
+                        "FORBIDDEN_RESOURCE",
+                        "Nhà tuyển dụng chỉ được phép xem hồ sơ của sinh viên đã ứng tuyển vào tin của mình"
+                );
+            }
+            return mapToProfileResponse(targetProfile);
+        }
+
+        throw new AppException("FORBIDDEN_RESOURCE", "Bạn không có quyền xem hồ sơ của người dùng khác");
+    }
+
+    /**
      * Cập nhật thông tin hồ sơ cá nhân theo đúng vai trò:
      * - Sinh viên (FR-11): Cập nhật trường học, chuyên ngành, CV dạng văn bản và giới thiệu bản thân.
      * - Nhà tuyển dụng (FR-16): Cập nhật tên công ty/cửa hàng, người đại diện và giới thiệu đơn vị.
@@ -92,6 +130,17 @@ public class ProfileService {
 
         Profile savedProfile = profileRepository.save(profile);
         return mapToProfileResponse(savedProfile);
+    }
+
+    /**
+     * Kiểm tra sinh viên đã từng nộp hồ sơ ứng tuyển vào tin tuyển dụng của nhà tuyển dụng hay chưa.
+     *
+     * @param studentId  ID tài khoản sinh viên
+     * @param employerId ID tài khoản nhà tuyển dụng
+     * @return true nếu có ít nhất 1 đơn ứng tuyển
+     */
+    public boolean hasStudentAppliedToEmployerJobs(Long studentId, Long employerId) {
+        return profileRepository.countStudentApplicationsForEmployer(studentId, employerId) > 0;
     }
 
     /**
@@ -147,4 +196,3 @@ public class ProfileService {
                 .build();
     }
 }
-

@@ -7,6 +7,7 @@ import com.marketplace.dtos.LoginRequest;
 import com.marketplace.dtos.RegisterRequest;
 import com.marketplace.dtos.UpdateProfileRequest;
 import com.marketplace.entities.User;
+import com.marketplace.entities.UserStatus;
 import com.marketplace.repositories.CategoryRepository;
 import com.marketplace.repositories.LocationRepository;
 import com.marketplace.repositories.ProfileRepository;
@@ -35,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Kiểm thử tích hợp cho Sprint 1 (Module Auth & Profile): FR-01, FR-02, FR-03, FR-04, FR-05, FR-11, FR-16 và NFR-02.
+ * Kiểm thử tích hợp cho Sprint 2 (Module Auth & Profile): FR-01, FR-02, FR-03, FR-04, FR-05, FR-11, FR-16 và NFR-02.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -83,7 +84,7 @@ class AuthAndProfileIntegrationTests {
     }
 
     @Test
-    @DisplayName("FR-01 & NFR-02(a): Đăng ký tài khoản Sinh viên thành công, tạo Profile 1-1 và lưu mật khẩu băm BCrypt trong CSDL")
+    @DisplayName("FR-01 & NFR-02(a): Đăng ký tài khoản Sinh viên thành công, tạo tbl_users + tbl_profiles trong 1 giao dịch và băm BCrypt")
     void registerUser_FR01_NFR02a_validStudentInput_returnsCreatedUserAndHashesPasswordInDb() throws Exception {
         String rawPassword = "Abc@12345";
         RegisterRequest request = RegisterRequest.builder()
@@ -103,11 +104,46 @@ class AuthAndProfileIntegrationTests {
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
 
-        // NFR-02(a): Xác nhận mật khẩu lưu trong CSDL là bản băm BCrypt, tuyệt đối không lưu bản thô
+        // NFR-02(a): Xác nhận mật khẩu lưu trong CSDL là bản băm BCrypt và có bản ghi tbl_profiles tương ứng
         User savedUser = userRepository.findByEmail("sinhvienmoi@vanlanguni.vn").orElseThrow();
         assertThat(savedUser.getPasswordHash()).isNotEqualTo(rawPassword);
         assertThat(savedUser.getPasswordHash()).startsWith("$2a$");
         assertThat(passwordEncoder.matches(rawPassword, savedUser.getPasswordHash())).isTrue();
+        assertThat(profileRepository.findByUserId(savedUser.getId())).isPresent();
+    }
+
+    @Test
+    @DisplayName("FR-01: Đăng ký thất bại khi mật khẩu < 8 ký tự hoặc chọn vai trò ADMIN (400 BAD REQUEST kèm mảng errors)")
+    void registerUser_FR01_shortPasswordOrAdminRole_returnsBadRequest400() throws Exception {
+        RegisterRequest shortPasswordReq = RegisterRequest.builder()
+                .fullName("Sinh Viên Mật Khẩu Ngắn")
+                .email("shortpass@vanlanguni.vn")
+                .password("1234567")
+                .role("STUDENT")
+                .build();
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(shortPasswordReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/api/v1/auth/register"))
+                .andExpect(jsonPath("$.errors").isArray())
+                .andExpect(jsonPath("$.errors[0].field").value("password"));
+
+        RegisterRequest adminRoleReq = RegisterRequest.builder()
+                .fullName("Người Dùng Giả Mạo Admin")
+                .email("fakeadmin@vanlanguni.vn")
+                .password("Abc@12345")
+                .role("ADMIN")
+                .build();
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(adminRoleReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errors").isArray());
     }
 
     @Test
@@ -124,9 +160,9 @@ class AuthAndProfileIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value(409))
                 .andExpect(jsonPath("$.errorCode").value("EMAIL_ALREADY_EXISTS"))
-                .andExpect(jsonPath("$.requestId").exists());
+                .andExpect(jsonPath("$.path").value("/api/v1/auth/register"));
     }
 
     @Test
@@ -161,20 +197,43 @@ class AuthAndProfileIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.errorCode").value("INVALID_CREDENTIALS"));
     }
 
     @Test
-    @DisplayName("FR-03: Đăng xuất tài khoản thành công khi đã xác thực JWT")
-    void logoutUser_FR03_authenticatedUser_returnsSuccessResponse() throws Exception {
+    @DisplayName("FR-02 & FR-04: Đăng nhập thất bại với tài khoản LOCKED trả về 403 FORBIDDEN (ACCOUNT_LOCKED)")
+    void loginUser_FR02_lockedAccount_returnsForbidden403() throws Exception {
+        User sv3 = userRepository.findByEmail("sv3@vanlanguni.vn").orElseThrow();
+        sv3.setStatus(UserStatus.LOCKED);
+        userRepository.save(sv3);
+
+        try {
+            LoginRequest loginRequest = LoginRequest.builder()
+                    .email("sv3@vanlanguni.vn")
+                    .password("Abc@12345")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(loginRequest)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.status").value(403))
+                    .andExpect(jsonPath("$.errorCode").value("ACCOUNT_LOCKED"));
+        } finally {
+            sv3.setStatus(UserStatus.ACTIVE);
+            userRepository.save(sv3);
+        }
+    }
+
+    @Test
+    @DisplayName("FR-03: Đăng xuất tài khoản thành công khi đã xác thực JWT trả về 204 NO CONTENT")
+    void logoutUser_FR03_authenticatedUser_returnsNoContent204() throws Exception {
         String token = obtainToken("sv1@vanlanguni.vn", "Abc@12345");
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Đăng xuất thành công"));
+                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -182,7 +241,7 @@ class AuthAndProfileIntegrationTests {
     void getMyProfile_FR04_NFR02b_withoutToken_returnsUnauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/profiles/me"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED_ACCESS"));
     }
 
@@ -197,14 +256,14 @@ class AuthAndProfileIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.errorCode").value("FORBIDDEN_RESOURCE"));
 
         // SV gọi API dành riêng cho Quản trị viên (ADMIN) -> 403 FORBIDDEN
         mockMvc.perform(get("/api/v1/admin/users")
                         .header("Authorization", "Bearer " + studentToken))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.errorCode").value("FORBIDDEN_RESOURCE"));
     }
 
@@ -217,7 +276,7 @@ class AuthAndProfileIntegrationTests {
         mockMvc.perform(get("/api/v1/profiles/me")
                         .header("Authorization", "Bearer " + expiredToken))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.errorCode").value("TOKEN_EXPIRED"));
     }
 
@@ -236,6 +295,41 @@ class AuthAndProfileIntegrationTests {
     }
 
     @Test
+    @DisplayName("FR-04 & FR-05: GET /profiles/{userId} - NTD chỉ xem được SV đã ứng tuyển tin của mình, SV gọi trả 403, ADMIN xem được tất cả")
+    void getUserProfileById_FR04_FR05_rbacAndEmployerApplicantOwnershipCheck() throws Exception {
+        String employerToken = obtainToken("hr@cafegocpho.vn", "Abc@12345");
+        String studentToken = obtainToken("sv1@vanlanguni.vn", "Abc@12345");
+        String adminToken = obtainToken("admin@vlu.edu.vn", "Abc@12345");
+
+        // 1. NTD (id=2) xem hồ sơ SV 1 (id=4) đã nộp đơn ứng tuyển vào job_id=1 của NTD -> 200 OK
+        mockMvc.perform(get("/api/v1/profiles/4")
+                        .header("Authorization", "Bearer " + employerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(4))
+                .andExpect(jsonPath("$.data.email").value("sv1@vanlanguni.vn"));
+
+        // 2. NTD (id=2) xem hồ sơ SV 2 (id=5) CHƯA từng nộp đơn vào tin của NTD -> 403 FORBIDDEN
+        mockMvc.perform(get("/api/v1/profiles/5")
+                        .header("Authorization", "Bearer " + employerToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN_RESOURCE"));
+
+        // 3. SV (ROLE_STUDENT) gọi GET /api/v1/profiles/{userId} -> 403 FORBIDDEN
+        mockMvc.perform(get("/api/v1/profiles/4")
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
+
+        // 4. ADMIN (ROLE_ADMIN) xem được hồ sơ của bất kỳ người dùng nào -> 200 OK
+        mockMvc.perform(get("/api/v1/profiles/5")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(5))
+                .andExpect(jsonPath("$.data.email").value("sv2@vanlanguni.vn"));
+    }
+
+    @Test
     @DisplayName("FR-11: Sinh viên cập nhật hồ sơ học vấn và CV trực tuyến thành công, bỏ qua trường doanh nghiệp của NTD")
     void updateMyProfile_FR11_studentRole_updatesCvAndAcademicInfo() throws Exception {
         String token = obtainToken("sv1@vanlanguni.vn", "Abc@12345");
@@ -247,7 +341,7 @@ class AuthAndProfileIntegrationTests {
                 .bio("Sinh viên năm 3 chuyên ngành CNPM tại ĐH Văn Lang")
                 .school("Đại học Văn Lang")
                 .major("Kỹ thuật phần mềm")
-                .cvContent("Kỹ năng: Spring Security, JWT, ReactJS. Đã hoàn thành Sprint 1.")
+                .cvContent("Kỹ năng: Spring Security, JWT, ReactJS. Đã hoàn thành Sprint 2.")
                 .companyName("Công ty giả mạo không được phép lưu cho SV")
                 .build();
 
@@ -260,7 +354,7 @@ class AuthAndProfileIntegrationTests {
                 .andExpect(jsonPath("$.data.phone").value("0914333999"))
                 .andExpect(jsonPath("$.data.locationId").value(5))
                 .andExpect(jsonPath("$.data.major").value("Kỹ thuật phần mềm"))
-                .andExpect(jsonPath("$.data.cvContent").value("Kỹ năng: Spring Security, JWT, ReactJS. Đã hoàn thành Sprint 1."))
+                .andExpect(jsonPath("$.data.cvContent").value("Kỹ năng: Spring Security, JWT, ReactJS. Đã hoàn thành Sprint 2."))
                 .andExpect(jsonPath("$.data.companyName").doesNotExist());
     }
 

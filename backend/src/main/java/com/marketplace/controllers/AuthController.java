@@ -39,8 +39,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout() {
-        return ResponseEntity.ok(ApiResponse.success("Đăng xuất thành công", null));
+    public ResponseEntity<Void> logout() {
+        // FR-03: JWT Stateless trả về 204 No Content, phía Client xóa token trong LocalStorage
+        return ResponseEntity.noContent().build();
     }
 }
-

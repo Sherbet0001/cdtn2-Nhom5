@@ -1,10 +1,12 @@
 package com.marketplace.exceptions;
 
 import com.marketplace.dtos.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -21,14 +23,22 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(AppException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAppException(AppException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleAppException(AppException ex, HttpServletRequest request) {
         HttpStatus status = mapErrorCodeToHttpStatus(ex.getErrorCode());
-        ApiResponse<Void> body = ApiResponse.error(ex.getErrorCode(), ex.getMessage());
+        ApiResponse<Void> body = ApiResponse.error(
+                status.value(),
+                status.getReasonPhrase(),
+                ex.getErrorCode(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
         return ResponseEntity.status(status).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request) {
         List<ApiResponse.FieldValidationError> fieldErrors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -42,27 +52,61 @@ public class GlobalExceptionHandler {
                 ? "Dữ liệu đầu vào không hợp lệ"
                 : fieldErrors.get(0).getMessage();
 
-        ApiResponse<Void> body = ApiResponse.validationError(firstErrorMessage, fieldErrors);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ApiResponse<Void> body = ApiResponse.validationError(
+                status.value(),
+                status.getReasonPhrase(),
+                firstErrorMessage,
+                request.getRequestURI(),
+                fieldErrors
+        );
+        return ResponseEntity.status(status).body(body);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNotReadableException(HttpMessageNotReadableException ex) {
-        ApiResponse<Void> body = ApiResponse.error("BAD_REQUEST", "Định dạng dữ liệu JSON gửi lên không hợp lệ");
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    public ResponseEntity<ApiResponse<Void>> handleNotReadableException(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ApiResponse<Void> body = ApiResponse.error(
+                status.value(),
+                status.getReasonPhrase(),
+                "BAD_REQUEST",
+                "Định dạng dữ liệu JSON gửi lên không hợp lệ",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(status).body(body);
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
-        ApiResponse<Void> body = ApiResponse.error("FORBIDDEN_RESOURCE", "Bạn không có quyền truy cập chức năng này");
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(
+            Exception ex,
+            HttpServletRequest request) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        ApiResponse<Void> body = ApiResponse.error(
+                status.value(),
+                status.getReasonPhrase(),
+                "FORBIDDEN_RESOURCE",
+                "Bạn không có quyền truy cập chức năng này",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(status).body(body);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception ex) {
+    public ResponseEntity<ApiResponse<Void>> handleUnexpectedException(
+            Exception ex,
+            HttpServletRequest request) {
         // Không trả về stack trace hay thông tin nhạy cảm của CSDL ra ngoài Client
-        ApiResponse<Void> body = ApiResponse.error("INTERNAL_SERVER_ERROR", "Đã xảy ra lỗi hệ thống ngoài ý muốn, vui lòng thử lại sau");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        ApiResponse<Void> body = ApiResponse.error(
+                status.value(),
+                status.getReasonPhrase(),
+                "INTERNAL_SERVER_ERROR",
+                "Đã xảy ra lỗi hệ thống ngoài ý muốn, vui lòng thử lại sau",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(status).body(body);
     }
 
     private HttpStatus mapErrorCodeToHttpStatus(String errorCode) {
@@ -79,4 +123,3 @@ public class GlobalExceptionHandler {
         };
     }
 }
-

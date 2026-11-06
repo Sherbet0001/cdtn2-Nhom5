@@ -2,11 +2,13 @@ package com.marketplace.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marketplace.dtos.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -50,10 +52,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) ->
-                                writeSecurityError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                                writeSecurityError(request, response, HttpStatus.UNAUTHORIZED,
                                         "UNAUTHORIZED_ACCESS", "Vui lòng đăng nhập để thực hiện thao tác này"))
                         .accessDeniedHandler((request, response, accessDeniedException) ->
-                                writeSecurityError(response, HttpServletResponse.SC_FORBIDDEN,
+                                writeSecurityError(request, response, HttpStatus.FORBIDDEN,
                                         "FORBIDDEN_RESOURCE", "Bạn không có quyền truy cập tài nguyên này"))
                 )
                 .authorizeHttpRequests(auth -> auth
@@ -88,12 +90,22 @@ public class SecurityConfig {
         return source;
     }
 
-    private void writeSecurityError(HttpServletResponse response, int status, String errorCode, String message) throws IOException {
-        response.setStatus(status);
+    private void writeSecurityError(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            HttpStatus status,
+            String errorCode,
+            String message) throws IOException {
+        response.setStatus(status.value());
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        ApiResponse<Void> body = ApiResponse.error(errorCode, message);
+        ApiResponse<Void> body = ApiResponse.error(
+                status.value(),
+                status.getReasonPhrase(),
+                errorCode,
+                message,
+                request.getRequestURI()
+        );
         response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 }
-

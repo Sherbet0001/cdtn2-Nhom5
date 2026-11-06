@@ -11,6 +11,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -61,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .orElseThrow(() -> new AppException("UNAUTHORIZED_ACCESS", "Tài khoản người dùng không tồn tại"));
 
             if (user.getStatus() == UserStatus.LOCKED) {
-                writeJsonError(response, HttpServletResponse.SC_FORBIDDEN, "ACCOUNT_LOCKED",
+                writeJsonError(request, response, HttpStatus.FORBIDDEN, "ACCOUNT_LOCKED",
                         "Tài khoản của bạn đã bị khóa bởi Quản trị viên");
                 return;
             }
@@ -80,16 +81,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (AppException ex) {
             SecurityContextHolder.clearContext();
-            writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, ex.getErrorCode(), ex.getMessage());
+            writeJsonError(request, response, HttpStatus.UNAUTHORIZED, ex.getErrorCode(), ex.getMessage());
         }
     }
 
-    private void writeJsonError(HttpServletResponse response, int status, String errorCode, String message) throws IOException {
-        response.setStatus(status);
+    private void writeJsonError(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            HttpStatus status,
+            String errorCode,
+            String message) throws IOException {
+        response.setStatus(status.value());
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        ApiResponse<Void> errorBody = ApiResponse.error(errorCode, message);
+        ApiResponse<Void> errorBody = ApiResponse.error(
+                status.value(),
+                status.getReasonPhrase(),
+                errorCode,
+                message,
+                request.getRequestURI()
+        );
         response.getWriter().write(objectMapper.writeValueAsString(errorBody));
     }
 }
-

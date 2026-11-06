@@ -9,6 +9,10 @@ const profileService = {
     return axiosClient.put('/profiles/me', payload);
   },
 
+  getUserProfileById(userId) {
+    return axiosClient.get(`/profiles/${userId}`);
+  },
+
   getLocations() {
     return axiosClient.get('/locations');
   },
@@ -19,4 +23,3 @@ const profileService = {
 };
 
 export default profileService;
-

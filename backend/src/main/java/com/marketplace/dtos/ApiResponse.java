@@ -9,6 +9,8 @@ import java.util.UUID;
 
 /**
  * Định dạng JSON phản hồi chuẩn cho toàn bộ REST API (Thành công & Lỗi).
+ * Hỗ trợ đầy đủ cả các trường chuẩn { timestamp, status, error, message, path, errors }
+ * lẫn { success, errorCode, requestId }.
  */
 @Getter
 @Setter
@@ -19,8 +21,11 @@ import java.util.UUID;
 public class ApiResponse<T> {
 
     private boolean success;
+    private Integer status;
+    private String error;
     private String errorCode;
     private String message;
+    private String path;
     private T data;
     private List<FieldValidationError> errors;
     private String timestamp;
@@ -46,6 +51,19 @@ public class ApiResponse<T> {
                 .build();
     }
 
+    public static <T> ApiResponse<T> error(int status, String error, String errorCode, String message, String path) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .status(status)
+                .error(error)
+                .errorCode(errorCode)
+                .message(message)
+                .path(path)
+                .timestamp(Instant.now().toString())
+                .requestId(generateRequestId())
+                .build();
+    }
+
     public static <T> ApiResponse<T> error(String errorCode, String message) {
         return ApiResponse.<T>builder()
                 .success(false)
@@ -56,11 +74,19 @@ public class ApiResponse<T> {
                 .build();
     }
 
-    public static <T> ApiResponse<T> validationError(String message, List<FieldValidationError> errors) {
+    public static <T> ApiResponse<T> validationError(
+            int status,
+            String error,
+            String message,
+            String path,
+            List<FieldValidationError> errors) {
         return ApiResponse.<T>builder()
                 .success(false)
+                .status(status)
+                .error(error)
                 .errorCode("VALIDATION_ERROR")
                 .message(message)
+                .path(path)
                 .errors(errors)
                 .timestamp(Instant.now().toString())
                 .requestId(generateRequestId())
@@ -71,4 +97,3 @@ public class ApiResponse<T> {
         return "req-" + UUID.randomUUID().toString().substring(0, 8);
     }
 }
-
