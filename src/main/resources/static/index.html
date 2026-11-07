@@ -25,7 +25,7 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-slate-900 leading-tight">Nền tảng Freelance / Part-time Sinh viên</h1>
-          <p class="text-xs text-slate-500">Buổi 6: Sprint 1 Demo · SVTH: Đoàn Xuân Tiến (2374802010493)</p>
+          <p class="text-xs text-slate-500">Buổi 7: Sprint 2 Demo (Mốc giữa kỳ lần 2) · SVTH: Đoàn Xuân Tiến (2374802010493)</p>
         </div>
       </div>
       <div class="flex items-center space-x-3">
@@ -35,7 +35,7 @@
         </a>
         <button onclick="openModal()" class="inline-flex items-center px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-md shadow-sm transition">
           <i data-lucide="plus-circle" class="w-4 h-4 mr-1.5"></i>
-          Đăng tin mới (NTD)
+          Đăng tin mới (NTD - FR-17)
         </button>
       </div>
     </div>
@@ -126,7 +126,7 @@
 
   </main>
 
-  <!-- Create Job Modal -->
+  <!-- Create Job Modal (FR-17) -->
   <div id="jobModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-3 mb-4">
@@ -264,6 +264,47 @@
     </div>
   </div>
 
+  <!-- Apply Job Modal (FR-12) -->
+  <div id="applyModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl text-xs">
+      <h3 class="text-base font-bold text-slate-900 mb-2 flex items-center">
+        <i data-lucide="send" class="w-5 h-5 text-emerald-600 mr-2"></i>
+        Ứng tuyển công việc (FR-12)
+      </h3>
+      <p class="text-slate-500 mb-4" id="applyModalJobTitle">Ứng tuyển tin tuyển dụng</p>
+      
+      <input type="hidden" id="applyTargetJobId">
+      <div class="mb-4">
+        <label class="block font-semibold text-slate-700 mb-1">Lời nhắn kèm hồ sơ (Cover Letter)</label>
+        <textarea id="applyCoverLetter" rows="4" placeholder="VD: Em rảnh tối thứ 7 và chủ nhật, đã có kinh nghiệm..." class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+      </div>
+
+      <div class="flex justify-end space-x-2 border-t pt-3">
+        <button onclick="closeApplyModal()" class="px-3 py-1.5 border rounded-lg text-slate-600 hover:bg-slate-50">Hủy</button>
+        <button onclick="submitApplication()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow">Gửi hồ sơ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Applicants List Modal (FR-19, 21, 22) -->
+  <div id="applicantsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl text-xs max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between border-b pb-3 mb-4">
+        <h3 class="text-base font-bold text-slate-900 flex items-center">
+          <i data-lucide="users" class="w-5 h-5 text-blue-600 mr-2"></i>
+          Danh sách ứng viên nộp hồ sơ (FR-19)
+        </h3>
+        <button onclick="closeApplicantsModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="applicantsList" class="flex-1 overflow-y-auto space-y-3 pr-1">
+        <!-- Render applicants here -->
+      </div>
+    </div>
+  </div>
+
   <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
     Đề tài: Nền tảng quản lý freelance / marketplace việc làm part-time cho sinh viên · Khoa CNTT - ĐH Văn Lang 2026
   </footer>
@@ -285,7 +326,7 @@
         workSchedule: "Thứ 7, CN (18:00 - 22:30)",
         slots: 3,
         status: "OPEN",
-        createdAt: "2026-10-31T08:00:00"
+        createdAt: "2026-11-01T08:00:00"
       },
       {
         id: 2,
@@ -299,7 +340,7 @@
         workSchedule: "Thứ 2 đến Thứ 6 (07:00 - 12:00)",
         slots: 2,
         status: "OPEN",
-        createdAt: "2026-10-31T08:15:00"
+        createdAt: "2026-11-02T08:15:00"
       },
       {
         id: 3,
@@ -313,7 +354,7 @@
         workSchedule: "Tối thứ 3, 5 (19:00 - 21:00)",
         slots: 1,
         status: "OPEN",
-        createdAt: "2026-10-31T08:30:00"
+        createdAt: "2026-11-03T08:30:00"
       }
     ];
 
@@ -405,20 +446,37 @@
               </div>
             </div>
 
-            <div class="border-t border-slate-100 pt-3 flex items-center justify-between">
-              <div>
-                <span class="text-[10px] text-slate-400 uppercase font-semibold">Mức lương</span>
-                <p class="text-sm font-bold text-red-600">
-                  ${Number(job.salaryMin).toLocaleString()}đ - ${Number(job.salaryMax).toLocaleString()}đ
-                  <span class="text-xs font-normal text-slate-500">/${job.salaryUnit}</span>
-                </p>
+            <div class="border-t border-slate-100 pt-3">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold">Mức lương</span>
+                  <p class="text-sm font-bold text-red-600">
+                    ${Number(job.salaryMin).toLocaleString()}đ - ${Number(job.salaryMax).toLocaleString()}đ
+                    <span class="text-xs font-normal text-slate-500">/${job.salaryUnit}</span>
+                  </p>
+                </div>
+                
+                <div class="flex items-center space-x-1">
+                  <button onclick="openStatusModal(${job.id}, '${job.status}')" title="Đổi trạng thái tin (FR-23)" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="openApplicantsModal(${job.id}, '${job.title}')" title="Xem ứng viên (FR-19)" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-blue-600 transition">
+                    <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
               </div>
-              
-              <div class="flex items-center space-x-1">
-                <button onclick="openStatusModal(${job.id}, '${job.status}')" title="Đổi trạng thái tin (FR-23)" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition">
-                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+
+              <!-- Action button: Ứng tuyển (SV - FR-12) -->
+              ${job.status === 'OPEN' ? `
+                <button onclick="openApplyModal(${job.id}, '${job.title}')" class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition flex items-center justify-center text-xs">
+                  <i data-lucide="send" class="w-3.5 h-3.5 mr-1.5"></i>
+                  Ứng tuyển ngay (FR-12)
                 </button>
-              </div>
+              ` : `
+                <button disabled class="w-full py-1.5 bg-slate-100 text-slate-400 font-semibold rounded-lg text-xs cursor-not-allowed">
+                  Đã dừng nhận hồ sơ
+                </button>
+              `}
             </div>
           </div>
         `;
@@ -518,6 +576,126 @@
       }
     }
 
+    // Modal Ứng tuyển (FR-12)
+    function openApplyModal(jobId, jobTitle) {
+      document.getElementById('applyTargetJobId').value = jobId;
+      document.getElementById('applyModalJobTitle').innerText = `Ứng tuyển: ${jobTitle} (Mã tin #${jobId})`;
+      document.getElementById('applyCoverLetter').value = 'Em là sinh viên Văn Lang, rảnh các ngày cuối tuần và mong muốn ứng tuyển.';
+      document.getElementById('applyModal').classList.remove('hidden');
+    }
+
+    function closeApplyModal() {
+      document.getElementById('applyModal').classList.add('hidden');
+    }
+
+    async function submitApplication() {
+      const jobId = document.getElementById('applyTargetJobId').value;
+      const coverLetter = document.getElementById('applyCoverLetter').value;
+
+      try {
+        const res = await fetch(`/api/v1/jobs/${jobId}/applications`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-User-Id': '5' },
+          body: JSON.stringify({ coverLetter })
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          alert('Lỗi ứng tuyển (FR-12): ' + (errData.message || res.statusText));
+          return;
+        }
+        alert(`Nộp hồ sơ ứng tuyển thành công! Trạng thái: PENDING (Chờ duyệt)`);
+        closeApplyModal();
+      } catch (err) {
+        alert('Lưu ý: Để gọi API thực tế, hãy khởi động ứng dụng Spring Boot trên cổng 8080!');
+      }
+    }
+
+    // Modal Danh sách ứng viên (FR-19, 21, 22)
+    async function openApplicantsModal(jobId, jobTitle) {
+      const listEl = document.getElementById('applicantsList');
+      listEl.innerHTML = '<p class="text-center py-4 text-slate-400">Đang nạp danh sách hồ sơ ứng tuyển...</p>';
+      document.getElementById('applicantsModal').classList.remove('hidden');
+
+      try {
+        const res = await fetch(`/api/v1/jobs/${jobId}/applications`, {
+          headers: { 'X-User-Id': '2' }
+        });
+        if (!res.ok) throw new Error('API server error');
+        const data = await res.json();
+        const apps = data.content || [];
+        renderApplicants(apps);
+      } catch (err) {
+        // Fallback demo applicants
+        renderApplicants([
+          { id: 101, studentId: 5, studentName: "Đoàn Xuân Tiến (SV Văn Lang)", coverLetter: "Em rảnh tối thứ 7 và chủ nhật, đã có kinh nghiệm phục vụ.", status: "PENDING", appliedAt: "2026-11-06T14:30:00" },
+          { id: 102, studentId: 6, studentName: "Viên Thành Đạt", coverLetter: "Em muốn đăng ký ca làm linh hoạt.", status: "ACCEPTED", appliedAt: "2026-11-05T09:00:00" }
+        ]);
+      }
+    }
+
+    function renderApplicants(apps) {
+      const listEl = document.getElementById('applicantsList');
+      if (apps.length === 0) {
+        listEl.innerHTML = '<p class="text-center py-6 text-slate-400">Chưa có sinh viên nào nộp hồ sơ vào tin này.</p>';
+        return;
+      }
+
+      listEl.innerHTML = apps.map(app => {
+        let badge = 'bg-amber-50 text-amber-700 border-amber-200';
+        if (app.status === 'ACCEPTED') badge = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        if (app.status === 'REJECTED') badge = 'bg-rose-50 text-rose-700 border-rose-200';
+
+        return `
+          <div class="p-3.5 border border-slate-200 rounded-xl bg-slate-50 flex items-start justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-slate-900">${app.studentName || 'Sinh viên #' + app.studentId}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${badge}">${app.status}</span>
+              </div>
+              <p class="text-slate-600 text-[11px]"><strong class="text-slate-700">Lời nhắn:</strong> ${app.coverLetter || 'Không có lời nhắn'}</p>
+              <p class="text-slate-400 text-[10px]">Thời gian nộp: ${app.appliedAt}</p>
+            </div>
+
+            ${app.status === 'PENDING' ? `
+              <div class="flex space-x-1 shrink-0">
+                <button onclick="handleReviewApp(${app.id}, 'ACCEPTED')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold text-[11px] shadow-sm">
+                  Duyệt (FR-21)
+                </button>
+                <button onclick="handleReviewApp(${app.id}, 'REJECTED')" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-semibold text-[11px] shadow-sm">
+                  Từ chối (FR-22)
+                </button>
+              </div>
+            ` : `
+              <span class="text-slate-400 text-[11px] italic shrink-0">Đã chốt kết quả</span>
+            `}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function handleReviewApp(appId, status) {
+      try {
+        const res = await fetch(`/api/v1/applications/${appId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-User-Id': '2' },
+          body: JSON.stringify({ status })
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          alert('Lỗi duyệt hồ sơ: ' + (errData.message || res.statusText));
+          return;
+        }
+        alert(`Đã cập nhật hồ sơ #${appId} thành ${status}!`);
+        closeApplicantsModal();
+      } catch (err) {
+        alert('Cần khởi động backend Spring Boot trên cổng 8080 để cập nhật thực tế!');
+      }
+    }
+
+    function closeApplicantsModal() {
+      document.getElementById('applicantsModal').classList.add('hidden');
+    }
+
     // Auto load on start
     document.addEventListener('DOMContentLoaded', () => {
       fetchJobs();
@@ -526,4 +704,3 @@
   </script>
 </body>
 </html>
-

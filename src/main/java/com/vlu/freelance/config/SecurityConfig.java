@@ -32,8 +32,10 @@ public class SecurityConfig {
                     "/v3/api-docs/**",
                     "/v3/api-docs.yaml"
                 ).permitAll()
-                // Phục vụ chạy thử nghiệm và demo Sprint 1 phân hệ Job
-                .requestMatchers("/api/v1/jobs/**").permitAll()
+                // Danh mục công khai
+                .requestMatchers("/api/v1/categories/**", "/api/v1/locations/**").permitAll()
+                // Phục vụ chạy thử nghiệm và demo Sprint 2 phân hệ Job & Application
+                .requestMatchers("/api/v1/jobs/**", "/api/v1/applications/**").permitAll()
                 .anyRequest().authenticated()
             );
 
