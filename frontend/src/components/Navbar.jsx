@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Briefcase,
   Building2,
+  ClipboardList,
   LogOut,
   PlusCircle,
   Search,
@@ -10,6 +11,7 @@ import {
   UserCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const ROLE_BADGE_CONFIG = {
   STUDENT: {
@@ -69,6 +71,20 @@ const Navbar = () => {
               <span>Tìm việc làm</span>
             </Link>
 
+            {isAuthenticated && user?.role === 'STUDENT' && (
+              <Link
+                to="/applications/mine"
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  location.pathname === '/applications/mine'
+                    ? 'bg-red-50 text-red-700'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <ClipboardList className="h-4 w-4" />
+                <span>Việc đã ứng tuyển</span>
+              </Link>
+            )}
+
             {isAuthenticated && user?.role === 'EMPLOYER' && (
               <>
                 <Link
@@ -102,6 +118,8 @@ const Navbar = () => {
         <nav className="flex items-center gap-2.5">
           {isAuthenticated && user ? (
             <>
+              <NotificationBell />
+
               <Link
                 to="/profile"
                 className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${

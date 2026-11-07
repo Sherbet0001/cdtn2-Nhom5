@@ -18,13 +18,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 /**
- * REST Controller cung cấp các API Ứng tuyển việc làm cho Sinh viên và Duyệt hồ sơ cho Nhà tuyển dụng
- * (FR-12, FR-19, FR-21, FR-22).
+ * REST Controller cung cấp các API Ứng tuyển việc làm, Theo dõi lịch sử ứng tuyển cho Sinh viên
+ * và Duyệt hồ sơ cho Nhà tuyển dụng (FR-12, FR-13, FR-14, FR-19, FR-21, FR-22).
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -42,6 +43,27 @@ public class ApplicationController {
         ApplicationResponse application = applicationService.applyJob(currentUser.getId(), jobId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Nộp hồ sơ ứng tuyển thành công", application));
+    }
+
+    @GetMapping("/applications/mine")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<List<ApplicationResponse>>> getMyApplications(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @RequestParam(name = "status", required = false) String status) {
+        List<ApplicationResponse> applications = applicationService.getMyApplications(
+                currentUser.getId(),
+                status
+        );
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách hồ sơ ứng tuyển của bạn thành công", applications));
+    }
+
+    @GetMapping("/applications/{id}")
+    @PreAuthorize("hasAnyRole('STUDENT', 'EMPLOYER')")
+    public ResponseEntity<ApiResponse<ApplicationResponse>> getApplicationDetail(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @PathVariable("id") Long id) {
+        ApplicationResponse application = applicationService.getApplicationById(currentUser.getId(), id);
+        return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết hồ sơ ứng tuyển thành công", application));
     }
 
     @GetMapping("/jobs/{jobId}/applications")
@@ -70,4 +92,3 @@ public class ApplicationController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái hồ sơ ứng tuyển thành công", updated));
     }
 }
-

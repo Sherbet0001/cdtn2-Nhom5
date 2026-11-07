@@ -15,10 +15,12 @@ import {
   RefreshCw,
   Save,
   Search,
+  Star,
   UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import profileService from '../services/profileService';
+import reviewService from '../services/reviewService';
 
 const ProfilePage = () => {
   const { user, syncUserProfileName } = useAuth();
@@ -40,6 +42,11 @@ const ProfilePage = () => {
 
   const [profile, setProfile] = useState(null);
   const [locations, setLocations] = useState([]);
+  const [reviewsSummary, setReviewsSummary] = useState({
+    averageRating: 0,
+    totalReviews: 0,
+    reviews: [],
+  });
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -69,6 +76,17 @@ const ProfilePage = () => {
 
       setProfile(fetchedProfile);
       setLocations(fetchedLocations);
+
+      if (fetchedProfile?.userId) {
+        try {
+          const revRes = await reviewService.getUserReviews(fetchedProfile.userId);
+          if (revRes.data) {
+            setReviewsSummary(revRes.data);
+          }
+        } catch {
+          // Giữ mặc định nếu chưa có đánh giá
+        }
+      }
 
       if (fetchedProfile) {
         setFormData({
@@ -628,6 +646,80 @@ const ProfilePage = () => {
           </section>
         )}
       </div>
+
+      {/* Khối hiển thị Đánh giá VISIBLE & Điểm trung bình (GET /api/v1/users/{userId}/reviews - FR-15, FR-24) */}
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              Đánh giá nhận được & Điểm uy tín (FR-15, FR-24)
+            </h2>
+            <p className="text-xs text-slate-500">
+              Chỉ hiển thị các đánh giá hợp lệ (status = VISIBLE) sau khi hoàn thành công việc
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-2.5 border border-amber-200">
+            <Star className="h-6 w-6 fill-amber-400 text-amber-500" />
+            <div>
+              <div className="text-base font-bold text-amber-900">
+                {reviewsSummary.averageRating ?? 0} / 5.0 sao
+              </div>
+              <div className="text-xs text-amber-700">
+                {reviewsSummary.totalReviews ?? 0} lượt đánh giá
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {(!reviewsSummary.reviews || reviewsSummary.reviews.length === 0) ? (
+          <div className="py-8 text-center">
+            <Inbox className="mx-auto h-8 w-8 text-slate-400" />
+            <p className="mt-2 text-sm font-semibold text-slate-700">
+              Người dùng này chưa nhận được đánh giá nào
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {reviewsSummary.reviews.map((rev) => (
+              <div
+                key={rev.id}
+                className="rounded-xl border border-slate-100 bg-slate-50/70 p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-900">
+                      {rev.reviewerName}
+                    </span>
+                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                      {rev.reviewerRole}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800">
+                      <Star className="h-3 w-3 fill-amber-500 text-amber-600" />
+                      <span>{rev.rating} / 5</span>
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400">
+                    {rev.createdAt
+                      ? new Date(rev.createdAt).toLocaleString('vi-VN')
+                      : ''}
+                  </span>
+                </div>
+
+                <p className="mt-1 text-xs font-medium text-slate-500">
+                  Công việc: <strong className="text-slate-700">{rev.jobTitle}</strong>
+                </p>
+
+                {rev.comment && (
+                  <p className="mt-2 whitespace-pre-line text-sm text-slate-800">
+                    {rev.comment}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

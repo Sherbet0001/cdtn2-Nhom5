@@ -8,12 +8,15 @@ import {
   GraduationCap,
   Inbox,
   Loader2,
+  Lock,
   Mail,
   Phone,
   RefreshCw,
+  Star,
   UserCheck,
   XCircle,
 } from 'lucide-react';
+import ReviewModal from '../components/ReviewModal';
 import jobService from '../services/jobService';
 
 const STATUS_BADGE = {
@@ -39,8 +42,10 @@ const JobApplicantsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorState, setErrorState] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [isUpdatingJobStatus, setIsUpdatingJobStatus] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
   const [actionError, setActionError] = useState(null);
+  const [reviewCandidate, setReviewCandidate] = useState(null);
 
   const loadJobAndApplicants = useCallback(async () => {
     setIsLoading(true);
@@ -89,6 +94,29 @@ const JobApplicantsPage = () => {
     }
   };
 
+  const handleJobStatusChange = async (targetStatus) => {
+    setIsUpdatingJobStatus(true);
+    setActionError(null);
+    setActionMessage('');
+
+    try {
+      await jobService.updateJobStatus(jobId, targetStatus);
+      setActionMessage(
+        targetStatus === 'COMPLETED'
+          ? 'Công việc đã chuyển sang COMPLETED! Đã gửi thông báo JOB_COMPLETED và mở đánh giá hai chiều.'
+          : `Đã chuyển trạng thái công việc sang ${targetStatus}!`
+      );
+      await loadJobAndApplicants();
+    } catch (error) {
+      setActionError({
+        message: error.message || 'Không thể cập nhật trạng thái công việc.',
+        requestId: error.requestId || 'N/A',
+      });
+    } finally {
+      setIsUpdatingJobStatus(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <div className="mb-4">
@@ -101,19 +129,72 @@ const JobApplicantsPage = () => {
         </Link>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-bold text-slate-900">
-          Danh sách ứng viên ứng tuyển (FR-19, FR-21, FR-22)
-        </h1>
+      <div className="mb-6 flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">
+            Danh sách ứng viên & Đánh giá (FR-19, FR-21, FR-22, FR-23, FR-24)
+          </h1>
+          {job && (
+            <p className="mt-1 text-sm text-slate-600">
+              Tin: <strong className="text-slate-900">{job.title}</strong> • Trạng thái tin:{' '}
+              <strong className="text-red-600">{job.status}</strong> • Đã nhận:{' '}
+              <strong className="text-emerald-700">
+                {job.acceptedCount ?? 0} / {job.slots}
+              </strong>{' '}
+              sinh viên
+            </p>
+          )}
+        </div>
+
+        {/* Nút đổi trạng thái tin ngay trên màn hình duyệt ứng viên (FR-23) */}
         {job && (
-          <p className="mt-1 text-sm text-slate-600">
-            Tin tuyển dụng: <strong className="text-slate-900">{job.title}</strong> • Chỉ tiêu đã
-            nhận:{' '}
-            <strong className="text-emerald-700">
-              {job.acceptedCount ?? 0} / {job.slots}
-            </strong>{' '}
-            sinh viên
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {job.status === 'OPEN' && (
+              <>
+                <button
+                  type="button"
+                  disabled={isUpdatingJobStatus}
+                  onClick={() => handleJobStatusChange('FILLED')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  <span>Chuyển sang FILLED</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isUpdatingJobStatus}
+                  onClick={() => handleJobStatusChange('CLOSED')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Đóng tin (CLOSED)</span>
+                </button>
+              </>
+            )}
+
+            {job.status === 'FILLED' && (
+              <>
+                <button
+                  type="button"
+                  disabled={isUpdatingJobStatus}
+                  onClick={() => handleJobStatusChange('COMPLETED')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-purple-700 disabled:opacity-50"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>Xác nhận COMPLETED</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isUpdatingJobStatus}
+                  onClick={() => handleJobStatusChange('CLOSED')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Đóng tin (CLOSED)</span>
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -199,6 +280,8 @@ const JobApplicantsPage = () => {
               className: 'bg-slate-100 text-slate-700 border-slate-200',
             };
             const isProcessing = actionLoadingId === app.id;
+            const canReviewStudent =
+              job?.status === 'COMPLETED' && app.status === 'ACCEPTED' && !app.hasReviewed;
 
             return (
               <div
@@ -243,13 +326,40 @@ const JobApplicantsPage = () => {
                     </div>
                   </div>
 
-                  <Link
-                    to={`/profiles/${app.studentId}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    <UserCheck className="h-3.5 w-3.5" />
-                    <span>Xem trang hồ sơ ứng viên</span>
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {canReviewStudent && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setReviewCandidate({
+                            jobId: job.id,
+                            jobTitle: job.title,
+                            revieweeId: app.studentId,
+                            revieweeName: app.studentFullName,
+                          })
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-amber-600"
+                      >
+                        <Star className="h-3.5 w-3.5 fill-white" />
+                        <span>Đánh giá Sinh viên (FR-24)</span>
+                      </button>
+                    )}
+
+                    {app.hasReviewed && (
+                      <span className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Đã đánh giá SV</span>
+                      </span>
+                    )}
+
+                    <Link
+                      to={`/profiles/${app.studentId}`}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      <UserCheck className="h-3.5 w-3.5" />
+                      <span>Xem trang hồ sơ ứng viên</span>
+                    </Link>
+                  </div>
                 </div>
 
                 {app.studentCvContent && (
@@ -311,9 +421,23 @@ const JobApplicantsPage = () => {
           })}
         </div>
       )}
+
+      {/* Modal Đánh giá Sinh viên (FR-24) */}
+      <ReviewModal
+        isOpen={Boolean(reviewCandidate)}
+        onClose={() => setReviewCandidate(null)}
+        jobId={reviewCandidate?.jobId}
+        jobTitle={reviewCandidate?.jobTitle}
+        revieweeId={reviewCandidate?.revieweeId}
+        revieweeName={reviewCandidate?.revieweeName}
+        revieweeRoleLabel="Sinh viên"
+        onSuccess={() => {
+          setActionMessage('Đã gửi đánh giá cho sinh viên thành công!');
+          loadJobAndApplicants();
+        }}
+      />
     </div>
   );
 };
 
 export default JobApplicantsPage;
-

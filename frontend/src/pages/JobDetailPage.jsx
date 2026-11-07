@@ -14,9 +14,11 @@ import {
   MapPin,
   RefreshCw,
   Send,
+  Star,
   Users,
 } from 'lucide-react';
 import { formatVnd, SALARY_UNIT_LABELS } from '../components/JobCard';
+import ReviewModal from '../components/ReviewModal';
 import { useAuth } from '../contexts/AuthContext';
 import jobService from '../services/jobService';
 
@@ -53,6 +55,7 @@ const JobDetailPage = () => {
   const [isApplying, setIsApplying] = useState(false);
   const [applyError, setApplyError] = useState(null);
   const [applySuccess, setApplySuccess] = useState('');
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const loadJobDetail = useCallback(async () => {
     setIsLoading(true);
@@ -151,6 +154,11 @@ const JobDetailPage = () => {
     isAuthenticated && user?.role === 'EMPLOYER' && user?.id === job.employerId;
   const isStudent = isAuthenticated && user?.role === 'STUDENT';
   const unitLabel = SALARY_UNIT_LABELS[job.salaryUnit] || job.salaryUnit;
+  const canStudentReviewEmployer =
+    isStudent &&
+    job.status === 'COMPLETED' &&
+    job.myApplicationStatus === 'ACCEPTED' &&
+    !job.hasReviewedEmployer;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -200,9 +208,19 @@ const JobDetailPage = () => {
 
         <h1 className="mt-3 text-2xl font-bold text-slate-900">{job.title}</h1>
 
-        <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <Building2 className="h-4 w-4 text-slate-400" />
-          <span>{job.companyName}</span>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm font-semibold text-slate-700">
+          <span className="inline-flex items-center gap-1.5">
+            <Building2 className="h-4 w-4 text-slate-400" />
+            <span>{job.companyName}</span>
+          </span>
+          {isAuthenticated && (
+            <Link
+              to={`/profiles/${job.employerId}`}
+              className="text-xs font-semibold text-red-600 hover:underline"
+            >
+              Xem hồ sơ & Đánh giá của Nhà tuyển dụng
+            </Link>
+          )}
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-2">
@@ -246,11 +264,11 @@ const JobDetailPage = () => {
         </div>
       </div>
 
-      {/* Khối Ứng tuyển dành cho Sinh viên (FR-12) */}
+      {/* Khối Ứng tuyển & Đánh giá dành cho Sinh viên (FR-12, FR-15) */}
       {isStudent && (
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <h2 className="text-lg font-bold text-slate-900">
-            Ứng tuyển công việc này (FR-12)
+            Ứng tuyển & Đánh giá công việc (FR-12, FR-15)
           </h2>
 
           {applySuccess && (
@@ -295,6 +313,29 @@ const JobDetailPage = () => {
                     </span>
                   </div>
                   <p className="mt-1.5 text-xs opacity-90">{statusCfg.desc}</p>
+
+                  {canStudentReviewEmployer && (
+                    <div className="mt-4 flex items-center justify-between border-t border-emerald-200/80 pt-3">
+                      <span className="text-xs font-semibold text-emerald-900">
+                        Công việc đã hoàn thành (COMPLETED). Hãy gửi đánh giá cho Nhà tuyển dụng!
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsReviewModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-amber-600"
+                      >
+                        <Star className="h-3.5 w-3.5 fill-white" />
+                        <span>Đánh giá Nhà tuyển dụng (FR-15)</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {job.hasReviewedEmployer && (
+                    <div className="mt-3 flex items-center gap-1.5 border-t border-emerald-200/80 pt-3 text-xs font-bold text-emerald-800">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span>Bạn đã gửi đánh giá cho Nhà tuyển dụng ở công việc này.</span>
+                    </div>
+                  )}
                 </div>
               );
             })()
@@ -360,9 +401,22 @@ const JobDetailPage = () => {
           </Link>
         </div>
       )}
+
+      <ReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        jobId={job.id}
+        jobTitle={job.title}
+        revieweeId={job.employerId}
+        revieweeName={job.companyName}
+        revieweeRoleLabel="Nhà tuyển dụng"
+        onSuccess={() => {
+          setApplySuccess('Đã gửi đánh giá cho Nhà tuyển dụng thành công!');
+          loadJobDetail();
+        }}
+      />
     </div>
   );
 };
 
 export default JobDetailPage;
-

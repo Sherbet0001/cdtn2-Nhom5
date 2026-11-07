@@ -1,0 +1,174 @@
+{
+  "info": {
+    "name": "VLU Part-time Job Marketplace - Sprint 4 (Status, Reviews, Applications Mine, Notifications)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman Collection cho Sprint 4: FR-23, FR-15, FR-24 (Must) & FR-13, FR-06 (Should)"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "employerToken",
+      "value": ""
+    },
+    {
+      "key": "studentToken",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. FR-23: Đổi trạng thái công việc (PATCH /jobs/{id}/status)",
+      "item": [
+        {
+          "name": "Chuyển OPEN -> FILLED",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"FILLED\"\n}"
+            },
+            "url": "{{baseUrl}}/jobs/1/status"
+          }
+        },
+        {
+          "name": "Chuyển FILLED -> COMPLETED (Tạo thông báo JOB_COMPLETED cho SV ACCEPTED)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": "{{baseUrl}}/jobs/1/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. FR-15 & FR-24: Đánh giá hai chiều (Reviews)",
+      "item": [
+        {
+          "name": "FR-24: NTD đánh giá Sinh viên đã ACCEPTED (POST /jobs/{jobId}/reviews)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revieweeId\": 4,\n  \"rating\": 5,\n  \"comment\": \"Làm việc đúng giờ, trách nhiệm cao.\"\n}"
+            },
+            "url": "{{baseUrl}}/jobs/1/reviews"
+          }
+        },
+        {
+          "name": "FR-15: Sinh viên đánh giá NTD chủ tin (POST /jobs/{jobId}/reviews)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revieweeId\": 2,\n  \"rating\": 5,\n  \"comment\": \"Môi trường làm việc thân thiện, trả lương đúng hạn.\"\n}"
+            },
+            "url": "{{baseUrl}}/jobs/1/reviews"
+          }
+        },
+        {
+          "name": "Xem đánh giá VISIBLE kèm điểm trung bình (GET /users/{userId}/reviews)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/users/4/reviews"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. FR-13 & FR-14: Theo dõi & Lịch sử ứng tuyển (Applications Mine)",
+      "item": [
+        {
+          "name": "Danh sách hồ sơ đã nộp của SV (GET /applications/mine?status=ACCEPTED)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/applications/mine?status=ACCEPTED"
+          }
+        },
+        {
+          "name": "Xem chi tiết một hồ sơ ứng tuyển (GET /applications/{id})",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/applications/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. FR-06: Hệ thống Thông báo (Notifications)",
+      "item": [
+        {
+          "name": "Lấy số lượng thông báo chưa đọc (GET /notifications/unread-count)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/notifications/unread-count"
+          }
+        },
+        {
+          "name": "Lấy danh sách thông báo (GET /notifications?unreadOnly=false)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/notifications?unreadOnly=false"
+          }
+        },
+        {
+          "name": "Đánh dấu 1 thông báo đã đọc (PATCH /notifications/{id}/read)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/notifications/1/read"
+          }
+        },
+        {
+          "name": "Đánh dấu tất cả đã đọc (PATCH /notifications/read-all)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/notifications/read-all"
+          }
+        }
+      ]
+    }
+  ]
+}
+

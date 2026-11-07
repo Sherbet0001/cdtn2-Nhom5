@@ -4,6 +4,7 @@ import com.marketplace.dtos.ApiResponse;
 import com.marketplace.dtos.CreateJobRequest;
 import com.marketplace.dtos.JobResponse;
 import com.marketplace.dtos.PageResponse;
+import com.marketplace.dtos.UpdateJobStatusRequest;
 import com.marketplace.security.UserPrincipal;
 import com.marketplace.services.JobService;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -24,8 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 
 /**
- * REST Controller cung cấp các API quản lý và tìm kiếm tin tuyển dụng việc làm part-time
- * (FR-07, FR-08, FR-09, FR-10, FR-17, FR-18, FR-20).
+ * REST Controller cung cấp các API quản lý, tìm kiếm và đổi trạng thái tin tuyển dụng việc làm part-time
+ * (FR-07, FR-08, FR-09, FR-10, FR-17, FR-18, FR-20, FR-23).
  */
 @RestController
 @RequestMapping("/api/v1/jobs")
@@ -64,6 +66,16 @@ public class JobController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật tin tuyển dụng thành công", updatedJob));
     }
 
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('EMPLOYER')")
+    public ResponseEntity<ApiResponse<JobResponse>> changeJobStatus(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody UpdateJobStatusRequest request) {
+        JobResponse updatedJob = jobService.changeJobStatus(currentUser.getId(), id, request);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái tin tuyển dụng thành công", updatedJob));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> searchOpenJobs(
             @RequestParam(name = "keyword", required = false) String keyword,
@@ -96,4 +108,3 @@ public class JobController {
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết tin tuyển dụng thành công", jobDetail));
     }
 }
-

@@ -1,14 +1,18 @@
 package com.marketplace.dtos;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * DTO phản hồi thông tin tin tuyển dụng (FR-07, FR-08, FR-09, FR-10, FR-17, FR-18, FR-20).
+ * DTO phản hồi thông tin tin tuyển dụng (FR-07, FR-08, FR-09, FR-10, FR-17, FR-18, FR-20, FR-23).
  */
 @Getter
 @Setter
@@ -41,8 +45,8 @@ public class JobResponse {
     private Long acceptedCount;
     private Boolean hasApplied;
     private String myApplicationStatus;
+    private Boolean hasReviewedEmployer;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
-

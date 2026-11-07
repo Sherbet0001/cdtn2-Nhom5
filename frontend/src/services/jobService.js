@@ -21,8 +21,21 @@ const jobService = {
     return axiosClient.put(`/jobs/${id}`, payload);
   },
 
+  updateJobStatus(id, status) {
+    return axiosClient.patch(`/jobs/${id}/status`, { status });
+  },
+
   applyJob(jobId, payload) {
     return axiosClient.post(`/jobs/${jobId}/applications`, payload);
+  },
+
+  getMyApplications(status = '') {
+    const params = status ? { status } : {};
+    return axiosClient.get('/applications/mine', { params });
+  },
+
+  getApplicationById(id) {
+    return axiosClient.get(`/applications/${id}`);
   },
 
   getJobApplications(jobId) {
@@ -35,4 +48,3 @@ const jobService = {
 };
 
 export default jobService;
-

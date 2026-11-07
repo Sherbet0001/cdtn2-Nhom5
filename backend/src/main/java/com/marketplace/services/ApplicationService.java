@@ -7,7 +7,7 @@ import com.marketplace.entities.ApplicationStatus;
 import com.marketplace.entities.Job;
 import com.marketplace.entities.JobApplication;
 import com.marketplace.entities.JobStatus;
-import com.marketplace.entities.Notification;
+import com.marketplace.entities.Location;
 import com.marketplace.entities.NotificationType;
 import com.marketplace.entities.Profile;
 import com.marketplace.entities.User;
@@ -15,8 +15,8 @@ import com.marketplace.entities.UserRole;
 import com.marketplace.exceptions.AppException;
 import com.marketplace.repositories.ApplicationRepository;
 import com.marketplace.repositories.JobRepository;
-import com.marketplace.repositories.NotificationRepository;
 import com.marketplace.repositories.ProfileRepository;
+import com.marketplace.repositories.ReviewRepository;
 import com.marketplace.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Dịch vụ xử lý nghiệp vụ Ứng tuyển việc làm và Duyệt hồ sơ ứng viên (FR-06, FR-12, FR-19, FR-21, FR-22).
+ * Dịch vụ xử lý nghiệp vụ Ứng tuyển việc làm, Theo dõi hồ sơ đã nộp và Duyệt hồ sơ ứng viên
+ * (FR-06, FR-12, FR-13, FR-14, FR-19, FR-21, FR-22).
  */
 @Service
 @RequiredArgsConstructor
@@ -37,14 +38,11 @@ public class ApplicationService {
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
-    private final NotificationRepository notificationRepository;
+    private final ReviewRepository reviewRepository;
+    private final NotificationService notificationService;
 
     /**
      * Sinh viên nộp hồ sơ ứng tuyển vào tin tuyển dụng (FR-12) và tự động tạo thông báo APPLICATION_NEW cho NTD (FR-06).
-     * Điều kiện ứng tuyển:
-     * 1. Tin tuyển dụng phải ở trạng thái OPEN (409 nếu không OPEN).
-     * 2. Sinh viên chưa từng ứng tuyển vào tin này (409 nếu nộp trùng).
-     * 3. Hồ sơ cá nhân của Sinh viên đã cập nhật nội dung CV (cv_content không rỗng).
      *
      * @param studentId ID Sinh viên đang đăng nhập
      * @param jobId     ID tin tuyển dụng cần ứng tuyển
@@ -96,16 +94,73 @@ public class ApplicationService {
         JobApplication savedApplication = applicationRepository.save(application);
 
         // QT-NOTIF (FR-06): Tự động ghi thông báo APPLICATION_NEW vào tbl_notifications cho Nhà tuyển dụng chủ tin
-        Notification notification = Notification.builder()
-                .user(job.getEmployer())
-                .application(savedApplication)
-                .type(NotificationType.APPLICATION_NEW)
-                .message("Ứng viên " + studentProfile.getFullName() + " vừa nộp hồ sơ vào tin: " + job.getTitle())
-                .isRead(false)
-                .build();
-        notificationRepository.save(notification);
+        notificationService.createNotification(
+                job.getEmployer(),
+                savedApplication,
+                NotificationType.APPLICATION_NEW,
+                "Ứng viên " + studentProfile.getFullName() + " vừa nộp hồ sơ vào tin: " + job.getTitle()
+        );
 
-        return mapToApplicationResponse(savedApplication, studentProfile);
+        Profile employerProfile = profileRepository.findByUserId(job.getEmployer().getId()).orElse(null);
+        return mapToApplicationResponse(savedApplication, studentProfile, employerProfile, studentId);
+    }
+
+    /**
+     * Lấy danh sách hồ sơ đã nộp của Sinh viên đang đăng nhập, hỗ trợ lọc theo trạng thái status (FR-13, FR-14).
+     *
+     * @param studentId   ID Sinh viên đang đăng nhập
+     * @param statusParam Trạng thái cần lọc (PENDING, ACCEPTED, REJECTED hoặc null/rỗng để lấy tất cả)
+     * @return Danh sách lịch sử hồ sơ ứng tuyển của Sinh viên
+     */
+    @Transactional(readOnly = true)
+    public List<ApplicationResponse> getMyApplications(Long studentId, String statusParam) {
+        List<JobApplication> applications;
+        if (statusParam != null && !statusParam.trim().isEmpty()) {
+            ApplicationStatus statusFilter;
+            try {
+                statusFilter = ApplicationStatus.valueOf(statusParam.trim().toUpperCase());
+            } catch (Exception ex) {
+                throw new AppException("BAD_REQUEST", "Trạng thái lọc hồ sơ chỉ chấp nhận PENDING, ACCEPTED hoặc REJECTED");
+            }
+            applications = applicationRepository.findByStudentIdAndStatusOrderByAppliedAtDesc(studentId, statusFilter);
+        } else {
+            applications = applicationRepository.findByStudentIdOrderByAppliedAtDesc(studentId);
+        }
+
+        Profile studentProfile = profileRepository.findByUserId(studentId).orElse(null);
+        return applications.stream()
+                .map(app -> {
+                    Profile employerProfile = profileRepository.findByUserId(app.getJob().getEmployer().getId()).orElse(null);
+                    return mapToApplicationResponse(app, studentProfile, employerProfile, studentId);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Xem chi tiết một hồ sơ ứng tuyển và trạng thái hiện tại (FR-13).
+     * Chỉ cho phép Sinh viên chủ hồ sơ hoặc Nhà tuyển dụng chủ tin xem.
+     *
+     * @param currentUserId ID người dùng đang đăng nhập
+     * @param applicationId ID hồ sơ ứng tuyển
+     * @return Thông tin chi tiết hồ sơ ứng tuyển
+     * @throws AppException Mã lỗi APPLICATION_NOT_FOUND (404) hoặc FORBIDDEN_RESOURCE (403) nếu không có quyền sở hữu
+     */
+    @Transactional(readOnly = true)
+    public ApplicationResponse getApplicationById(Long currentUserId, Long applicationId) {
+        JobApplication application = applicationRepository.findWithDetailsById(applicationId)
+                .orElseThrow(() -> new AppException("APPLICATION_NOT_FOUND", "Không tìm thấy hồ sơ ứng tuyển"));
+
+        // QT-APP (FR-13): Kiểm tra quyền sở hữu — chỉ SV chủ hồ sơ hoặc NTD chủ tin mới được xem
+        if (!canAccessApplication(application, currentUserId)) {
+            throw new AppException(
+                    "FORBIDDEN_RESOURCE",
+                    "Bạn chỉ được phép xem hồ sơ ứng tuyển của chính mình hoặc hồ sơ nộp vào tin do mình đăng"
+            );
+        }
+
+        Profile studentProfile = profileRepository.findByUserId(application.getStudent().getId()).orElse(null);
+        Profile employerProfile = profileRepository.findByUserId(application.getJob().getEmployer().getId()).orElse(null);
+        return mapToApplicationResponse(application, studentProfile, employerProfile, currentUserId);
     }
 
     /**
@@ -126,11 +181,12 @@ public class ApplicationService {
             throw new AppException("FORBIDDEN_RESOURCE", "Bạn chỉ có quyền xem danh sách ứng viên của tin tuyển dụng do mình sở hữu");
         }
 
+        Profile employerProfile = profileRepository.findByUserId(employerId).orElse(null);
         return applicationRepository.findByJobIdWithStudentOrderByAppliedAtDesc(jobId)
                 .stream()
                 .map(app -> {
                     Profile studentProfile = profileRepository.findByUserId(app.getStudent().getId()).orElse(null);
-                    return mapToApplicationResponse(app, studentProfile);
+                    return mapToApplicationResponse(app, studentProfile, employerProfile, employerId);
                 })
                 .collect(Collectors.toList());
     }
@@ -193,24 +249,15 @@ public class ApplicationService {
                 ? "Chúc mừng! Hồ sơ ứng tuyển của bạn vào vị trí \"" + job.getTitle() + "\" đã được Nhà tuyển dụng chấp nhận."
                 : "Hồ sơ ứng tuyển của bạn vào vị trí \"" + job.getTitle() + "\" chưa phù hợp trong đợt tuyển này.";
 
-        Notification notification = Notification.builder()
-                .user(application.getStudent())
-                .application(savedApplication)
-                .type(notifType)
-                .message(notifMessage)
-                .isRead(false)
-                .build();
-        notificationRepository.save(notification);
+        notificationService.createNotification(application.getStudent(), savedApplication, notifType, notifMessage);
 
         Profile studentProfile = profileRepository.findByUserId(application.getStudent().getId()).orElse(null);
-        return mapToApplicationResponse(savedApplication, studentProfile);
+        Profile employerProfile = profileRepository.findByUserId(employerId).orElse(null);
+        return mapToApplicationResponse(savedApplication, studentProfile, employerProfile, employerId);
     }
 
     /**
      * Kiểm tra tin tuyển dụng đang ở trạng thái mở nhận hồ sơ (OPEN).
-     *
-     * @param job Thực thể tin tuyển dụng
-     * @return true nếu status == OPEN
      */
     public boolean isJobOpen(Job job) {
         return job != null && job.getStatus() == JobStatus.OPEN;
@@ -218,10 +265,6 @@ public class ApplicationService {
 
     /**
      * Kiểm tra sinh viên đã từng nộp đơn vào tin tuyển dụng này hay chưa.
-     *
-     * @param jobId     ID tin tuyển dụng
-     * @param studentId ID sinh viên
-     * @return true nếu đã tồn tại bản ghi trong tbl_applications
      */
     public boolean hasStudentApplied(Long jobId, Long studentId) {
         return applicationRepository.existsByJobIdAndStudentId(jobId, studentId);
@@ -229,21 +272,65 @@ public class ApplicationService {
 
     /**
      * Kiểm tra hồ sơ cá nhân của sinh viên đã có nội dung CV hợp lệ hay chưa.
-     *
-     * @param profile Hồ sơ cá nhân của sinh viên
-     * @return true nếu cvContent khác null và không rỗng
      */
     public boolean hasValidCv(Profile profile) {
         return profile != null && profile.getCvContent() != null && !profile.getCvContent().trim().isEmpty();
     }
 
-    private ApplicationResponse mapToApplicationResponse(JobApplication app, Profile studentProfile) {
+    /**
+     * Kiểm tra người dùng hiện tại có quyền xem chi tiết hồ sơ ứng tuyển hay không (SV chủ hồ sơ hoặc NTD chủ tin).
+     */
+    public boolean canAccessApplication(JobApplication application, Long userId) {
+        if (application == null || userId == null) {
+            return false;
+        }
+        boolean isStudentOwner = application.getStudent() != null
+                && application.getStudent().getId().equals(userId);
+        boolean isEmployerOwner = application.getJob() != null
+                && application.getJob().getEmployer() != null
+                && application.getJob().getEmployer().getId().equals(userId);
+        return isStudentOwner || isEmployerOwner;
+    }
+
+    private ApplicationResponse mapToApplicationResponse(
+            JobApplication app,
+            Profile studentProfile,
+            Profile employerProfile,
+            Long viewerUserId) {
         User student = app.getStudent();
+        Job job = app.getJob();
+        User employer = job.getEmployer();
+        Location location = job.getLocation();
+
+        String employerName = employerProfile != null ? employerProfile.getFullName() : employer.getEmail();
+        String companyName = (employerProfile != null && employerProfile.getCompanyName() != null)
+                ? employerProfile.getCompanyName()
+                : employerName;
+        String locationName = location != null ? (location.getDistrict() + ", " + location.getCity()) : null;
+
+        Boolean hasReviewed = null;
+        if (viewerUserId != null) {
+            Long revieweeId = viewerUserId.equals(student.getId()) ? employer.getId() : student.getId();
+            hasReviewed = reviewRepository.existsByJobIdAndReviewerIdAndRevieweeId(
+                    job.getId(),
+                    viewerUserId,
+                    revieweeId
+            );
+        }
+
         return ApplicationResponse.builder()
                 .id(app.getId())
                 .applicationId(app.getId())
-                .jobId(app.getJob().getId())
-                .jobTitle(app.getJob().getTitle())
+                .jobId(job.getId())
+                .jobTitle(job.getTitle())
+                .jobStatus(job.getStatus().name())
+                .employerId(employer.getId())
+                .employerName(employerName)
+                .companyName(companyName)
+                .salaryMin(job.getSalaryMin())
+                .salaryMax(job.getSalaryMax())
+                .salaryUnit(job.getSalaryUnit().name())
+                .locationName(locationName)
                 .studentId(student.getId())
                 .studentFullName(studentProfile != null ? studentProfile.getFullName() : student.getEmail())
                 .studentEmail(student.getEmail())
@@ -253,9 +340,9 @@ public class ApplicationService {
                 .studentCvContent(studentProfile != null ? studentProfile.getCvContent() : null)
                 .coverLetter(app.getCoverLetter())
                 .status(app.getStatus().name())
+                .hasReviewed(hasReviewed)
                 .appliedAt(app.getAppliedAt())
                 .updatedAt(app.getUpdatedAt())
                 .build();
     }
 }
-

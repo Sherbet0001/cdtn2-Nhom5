@@ -3,6 +3,7 @@ package com.marketplace.services;
 import com.marketplace.dtos.CreateJobRequest;
 import com.marketplace.dtos.JobResponse;
 import com.marketplace.dtos.PageResponse;
+import com.marketplace.dtos.UpdateJobStatusRequest;
 import com.marketplace.entities.ApplicationStatus;
 import com.marketplace.entities.Category;
 import com.marketplace.entities.Job;
@@ -19,6 +20,7 @@ import com.marketplace.repositories.CategoryRepository;
 import com.marketplace.repositories.JobRepository;
 import com.marketplace.repositories.LocationRepository;
 import com.marketplace.repositories.ProfileRepository;
+import com.marketplace.repositories.ReviewRepository;
 import com.marketplace.repositories.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -45,7 +47,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Dịch vụ xử lý nghiệp vụ Quản lý và Tìm kiếm Tin tuyển dụng (FR-07, FR-08, FR-09, FR-10, FR-17, FR-18, FR-20).
+ * Dịch vụ xử lý nghiệp vụ Quản lý, Tìm kiếm và Chuyển trạng thái Tin tuyển dụng
+ * (FR-07, FR-08, FR-09, FR-10, FR-17, FR-18, FR-20, FR-23).
  */
 @Service
 @RequiredArgsConstructor
@@ -58,6 +61,8 @@ public class JobService {
     private final CategoryRepository categoryRepository;
     private final LocationRepository locationRepository;
     private final ApplicationRepository applicationRepository;
+    private final ReviewRepository reviewRepository;
+    private final NotificationService notificationService;
     private final DataSource dataSource;
     private final EntityManager entityManager;
 
@@ -170,6 +175,65 @@ public class JobService {
     }
 
     /**
+     * Chuyển trạng thái tin tuyển dụng theo quy tắc trạng thái Mục 5 (FR-23):
+     * - OPEN -> FILLED -> COMPLETED
+     * - NTD được chuyển OPEN hoặc FILLED -> CLOSED
+     * - CLOSED và COMPLETED là trạng thái cuối, không quay ngược
+     * - Chỉ NTD chủ tin được đổi trạng thái
+     * - Khi chuyển sang COMPLETED, tự động tạo thông báo JOB_COMPLETED cho các Sinh viên đã ACCEPTED (FR-06).
+     *
+     * @param employerId ID của Nhà tuyển dụng đang đăng nhập
+     * @param jobId      ID tin tuyển dụng
+     * @param request    Trạng thái mới cần chuyển sang
+     * @return Thông tin tin tuyển dụng sau khi đổi trạng thái
+     * @throws AppException Mã lỗi JOB_NOT_FOUND (404), FORBIDDEN_RESOURCE (403), hoặc INVALID_STATUS_TRANSITION (409)
+     */
+    @Transactional
+    public JobResponse changeJobStatus(Long employerId, Long jobId, UpdateJobStatusRequest request) {
+        Job job = jobRepository.findWithDetailsById(jobId)
+                .orElseThrow(() -> new AppException("JOB_NOT_FOUND", "Không tìm thấy tin tuyển dụng"));
+
+        // QT-JOB (FR-23): Chỉ Nhà tuyển dụng sở hữu tin mới được phép đổi trạng thái tin
+        if (!isJobOwnedByEmployer(job, employerId)) {
+            throw new AppException("FORBIDDEN_RESOURCE", "Bạn chỉ có quyền đổi trạng thái đối với tin tuyển dụng do chính mình tạo ra");
+        }
+
+        JobStatus targetStatus;
+        try {
+            targetStatus = JobStatus.valueOf(request.getStatus().trim().toUpperCase());
+        } catch (Exception ex) {
+            throw new AppException("BAD_REQUEST", "Trạng thái tin tuyển dụng không hợp lệ");
+        }
+
+        JobStatus currentStatus = job.getStatus();
+
+        // QT-JOB (FR-23, Mục 5): Kiểm tra quy tắc chuyển trạng thái:
+        // OPEN -> FILLED -> COMPLETED; OPEN/FILLED -> CLOSED; CLOSED và COMPLETED là trạng thái cuối, không quay ngược
+        if (!isValidEmployerStatusTransition(currentStatus, targetStatus)) {
+            throw new AppException(
+                    "INVALID_STATUS_TRANSITION",
+                    "Không thể chuyển trạng thái tin tuyển dụng từ " + currentStatus + " sang " + targetStatus
+                            + " (Quy tắc: OPEN -> FILLED -> COMPLETED, hoặc OPEN/FILLED -> CLOSED; không quay ngược từ COMPLETED/CLOSED)"
+            );
+        }
+
+        job.setStatus(targetStatus);
+        Job savedJob = jobRepository.save(job);
+
+        // QT-NOTIF (FR-23, FR-06): Khi chuyển sang COMPLETED, gửi thông báo JOB_COMPLETED cho các SV đã ACCEPTED
+        if (targetStatus == JobStatus.COMPLETED) {
+            List<JobApplication> acceptedApps = applicationRepository.findByJobIdAndStatusWithStudent(
+                    jobId,
+                    ApplicationStatus.ACCEPTED
+            );
+            notificationService.notifyAcceptedStudentsOnJobCompleted(savedJob, acceptedApps);
+        }
+
+        Profile employerProfile = profileRepository.findByUserId(savedJob.getEmployer().getId()).orElse(null);
+        return mapToJobResponse(savedJob, employerProfile, employerId);
+    }
+
+    /**
      * Lấy danh sách tin tuyển dụng do chính Nhà tuyển dụng đang đăng nhập tạo ra (FR-18).
      *
      * @param employerId ID của Nhà tuyển dụng
@@ -192,9 +256,6 @@ public class JobService {
 
     /**
      * Tìm kiếm và lọc danh sách việc làm đang mở tuyển (status = OPEN) kèm phân trang (FR-07, FR-08, FR-09).
-     * - Từ khóa (keyword): Ưu tiên thực thi Native Query FULLTEXT MATCH(title, description) AGAINST(...) trên MySQL 8.0;
-     *   tự động chuyển sang Specification LIKE khi chạy trên CSDL nhúng H2 hoặc từ khóa ngắn (< 3 ký tự).
-     * - Mức lương tối thiểu (minSalary): Chỉ áp dụng khi đi kèm đơn vị tính lương (salaryUnit).
      */
     @Transactional(readOnly = true)
     public PageResponse<JobResponse> searchOpenJobs(
@@ -314,6 +375,20 @@ public class JobService {
         return job != null
                 && job.getStatus() != JobStatus.COMPLETED
                 && job.getStatus() != JobStatus.CLOSED;
+    }
+
+    /**
+     * Kiểm tra tính hợp lệ của thao tác chuyển trạng thái tin tuyển dụng từ phía Nhà tuyển dụng (FR-23, Mục 5).
+     */
+    public boolean isValidEmployerStatusTransition(JobStatus currentStatus, JobStatus targetStatus) {
+        if (currentStatus == null || targetStatus == null || currentStatus == targetStatus) {
+            return false;
+        }
+        return switch (currentStatus) {
+            case OPEN -> targetStatus == JobStatus.FILLED || targetStatus == JobStatus.CLOSED;
+            case FILLED -> targetStatus == JobStatus.COMPLETED || targetStatus == JobStatus.CLOSED;
+            case COMPLETED, CLOSED, HIDDEN -> false;
+        };
     }
 
     @SuppressWarnings("unchecked")
@@ -462,6 +537,7 @@ public class JobService {
 
         Boolean hasApplied = null;
         String myApplicationStatus = null;
+        Boolean hasReviewedEmployer = null;
         if (currentUserId != null) {
             JobApplication existingApp = applicationRepository
                     .findByJobIdAndStudentId(job.getId(), currentUserId)
@@ -470,6 +546,11 @@ public class JobService {
             if (existingApp != null) {
                 myApplicationStatus = existingApp.getStatus().name();
             }
+            hasReviewedEmployer = reviewRepository.existsByJobIdAndReviewerIdAndRevieweeId(
+                    job.getId(),
+                    currentUserId,
+                    employer.getId()
+            );
         }
 
         return JobResponse.builder()
@@ -496,6 +577,7 @@ public class JobService {
                 .acceptedCount(acceptedCount)
                 .hasApplied(hasApplied)
                 .myApplicationStatus(myApplicationStatus)
+                .hasReviewedEmployer(hasReviewedEmployer)
                 .status(job.getStatus().name())
                 .createdAt(job.getCreatedAt())
                 .updatedAt(job.getUpdatedAt())

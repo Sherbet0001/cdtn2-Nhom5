@@ -8,6 +8,7 @@ import JobDetailPage from './pages/JobDetailPage';
 import JobFormPage from './pages/JobFormPage';
 import JobListPage from './pages/JobListPage';
 import LoginPage from './pages/LoginPage';
+import MyApplicationsPage from './pages/MyApplicationsPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
 
@@ -71,6 +72,14 @@ const App = () => {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/applications/mine"
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT']}>
+                <MyApplicationsPage />
               </ProtectedRoute>
             }
           />
