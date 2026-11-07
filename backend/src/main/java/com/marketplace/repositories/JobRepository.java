@@ -1,6 +1,7 @@
 package com.marketplace.repositories;
 
 import com.marketplace.entities.Job;
+import com.marketplace.entities.JobStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +30,12 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
 
     @EntityGraph(attributePaths = {"employer", "category", "location"})
     Page<Job> findByEmployerId(Long employerId, Pageable pageable);
+
+    boolean existsByCategoryId(Long categoryId);
+
+    boolean existsByLocationId(Long locationId);
+
+    long countByStatus(JobStatus status);
 
     @Query(
             "SELECT j FROM Job j " +

@@ -10,5 +10,9 @@ import java.util.List;
 public interface LocationRepository extends JpaRepository<Location, Long> {
 
     List<Location> findAllByOrderByIdAsc();
+
+    boolean existsByCityIgnoreCaseAndDistrictIgnoreCase(String city, String district);
+
+    boolean existsByCityIgnoreCaseAndDistrictIgnoreCaseAndIdNot(String city, String district, Long id);
 }
 

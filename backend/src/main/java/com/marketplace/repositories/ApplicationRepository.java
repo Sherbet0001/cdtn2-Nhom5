@@ -24,6 +24,8 @@ public interface ApplicationRepository extends JpaRepository<JobApplication, Lon
 
     long countByJobIdAndStatus(Long jobId, ApplicationStatus status);
 
+    long countByStatus(ApplicationStatus status);
+
     @Query(
             "SELECT a FROM JobApplication a " +
             "JOIN FETCH a.job j " +

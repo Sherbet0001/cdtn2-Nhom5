@@ -104,7 +104,8 @@ public class JobController {
             @PathVariable("id") Long id,
             @AuthenticationPrincipal UserPrincipal currentUser) {
         Long currentUserId = currentUser != null ? currentUser.getId() : null;
-        JobResponse jobDetail = jobService.getJobDetail(id, currentUserId);
+        String currentUserRole = currentUser != null ? currentUser.getRole() : null;
+        JobResponse jobDetail = jobService.getJobDetail(id, currentUserId, currentUserRole);
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết tin tuyển dụng thành công", jobDetail));
     }
 }

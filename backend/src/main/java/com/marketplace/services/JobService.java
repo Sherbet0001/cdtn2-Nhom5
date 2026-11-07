@@ -343,14 +343,15 @@ public class JobService {
 
     /**
      * Xem thông tin chi tiết của một tin tuyển dụng (FR-10).
-     * Chặn người dùng vãng lai hoặc sinh viên xem tin đã bị Admin ẩn (HIDDEN).
+     * Chặn người dùng vãng lai hoặc sinh viên xem tin đã bị Admin ẩn (HIDDEN), trừ NTD chủ tin và ADMIN.
      */
     @Transactional(readOnly = true)
-    public JobResponse getJobDetail(Long jobId, Long currentUserId) {
+    public JobResponse getJobDetail(Long jobId, Long currentUserId, String currentUserRole) {
         Job job = jobRepository.findWithDetailsById(jobId)
                 .orElseThrow(() -> new AppException("JOB_NOT_FOUND", "Không tìm thấy tin tuyển dụng"));
 
-        if (job.getStatus() == JobStatus.HIDDEN && !isJobOwnedByEmployer(job, currentUserId)) {
+        boolean isAdmin = "ADMIN".equalsIgnoreCase(currentUserRole);
+        if (job.getStatus() == JobStatus.HIDDEN && !isAdmin && !isJobOwnedByEmployer(job, currentUserId)) {
             throw new AppException("JOB_NOT_FOUND", "Tin tuyển dụng không tồn tại hoặc đã bị ẩn");
         }
 

@@ -19,6 +19,8 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     @Query("SELECT p FROM Profile p JOIN FETCH p.user LEFT JOIN FETCH p.location WHERE p.user.id IN :userIds")
     List<Profile> findAllByUserIdIn(@Param("userIds") Collection<Long> userIds);
 
+    boolean existsByLocationId(Long locationId);
+
     /**
      * Đếm số hồ sơ ứng tuyển của một sinh viên vào các tin tuyển dụng thuộc sở hữu của một nhà tuyển dụng.
      */

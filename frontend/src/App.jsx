@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import { useAuth } from './contexts/AuthContext';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import EmployerJobsPage from './pages/EmployerJobsPage';
 import JobApplicantsPage from './pages/JobApplicantsPage';
 import JobDetailPage from './pages/JobDetailPage';
@@ -26,6 +27,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 const GuestRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
   if (isAuthenticated) {
+    if (user?.role === 'ADMIN') {
+      return <Navigate to="/admin" replace />;
+    }
     if (user?.role === 'EMPLOYER') {
       return <Navigate to="/employer/jobs" replace />;
     }
@@ -112,6 +116,14 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={['EMPLOYER']}>
                 <JobApplicantsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminDashboardPage />
               </ProtectedRoute>
             }
           />

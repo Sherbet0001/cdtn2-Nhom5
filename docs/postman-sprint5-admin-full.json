@@ -1,0 +1,183 @@
+{
+  "info": {
+    "_postman_id": "vlu-parttime-sprint5-collection",
+    "name": "VLU Part-time Job Marketplace - Full API Collection (Sprint 1 -> Sprint 5)",
+    "description": "Bộ sưu tập Postman đầy đủ cho Nền tảng Quản lý Freelance / Việc làm Part-time cho Sinh viên (FR-01 đến FR-31).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "studentToken", "value": "" },
+    { "key": "employerToken", "value": "" },
+    { "key": "adminToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth & Profile (Sprint 2)",
+      "item": [
+        {
+          "name": "POST /auth/login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@vlu.edu.vn\",\n  \"password\": \"Abc@12345\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "POST /auth/login (Employer)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hr@cafegocpho.vn\",\n  \"password\": \"Abc@12345\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "POST /auth/login (Student)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sv1@vanlanguni.vn\",\n  \"password\": \"Abc@12345\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Admin Users & Job Moderation (FR-25, FR-26, FR-27)",
+      "item": [
+        {
+          "name": "GET /admin/users (FR-25)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/admin/users?page=0&size=10"
+          }
+        },
+        {
+          "name": "PATCH /admin/users/{id}/status - Lock/Unlock (FR-26)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"LOCKED\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/users/6/status"
+          }
+        },
+        {
+          "name": "GET /admin/jobs (FR-27)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/admin/jobs?page=0&size=10"
+          }
+        },
+        {
+          "name": "PATCH /admin/jobs/{id}/status - Hide/Restore (FR-27)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"HIDDEN\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/jobs/1/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Admin Catalogs, Reviews & Stats (FR-28, FR-29, FR-30, FR-31)",
+      "item": [
+        {
+          "name": "POST /admin/categories (FR-28)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Trợ lý Nghiên cứu Khoa học\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/categories"
+          }
+        },
+        {
+          "name": "DELETE /admin/categories/{id} (FR-28 - 409 if in use)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/admin/categories/1"
+          }
+        },
+        {
+          "name": "POST /admin/locations (FR-29)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"city\": \"TP. Hồ Chí Minh\",\n  \"district\": \"Huyện Nhà Bè\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/locations"
+          }
+        },
+        {
+          "name": "GET /admin/reviews (FR-30)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/admin/reviews?page=0&size=10"
+          }
+        },
+        {
+          "name": "PATCH /admin/reviews/{id}/status (FR-30)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"HIDDEN\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/reviews/1/status"
+          }
+        },
+        {
+          "name": "GET /admin/stats (FR-31)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/admin/stats"
+          }
+        }
+      ]
+    }
+  ]
+}
+

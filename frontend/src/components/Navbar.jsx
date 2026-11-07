@@ -112,6 +112,20 @@ const Navbar = () => {
                 </Link>
               </>
             )}
+
+            {isAuthenticated && user?.role === 'ADMIN' && (
+              <Link
+                to="/admin"
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  location.pathname.startsWith('/admin')
+                    ? 'bg-purple-100 text-purple-800'
+                    : 'text-purple-700 hover:bg-purple-50'
+                }`}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span>Quản trị hệ thống</span>
+              </Link>
+            )}
           </div>
         </div>
 
