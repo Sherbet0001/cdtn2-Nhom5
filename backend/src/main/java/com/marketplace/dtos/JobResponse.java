@@ -40,6 +40,7 @@ public class JobResponse {
     private Long applicantCount;
     private Long acceptedCount;
     private Boolean hasApplied;
+    private String myApplicationStatus;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

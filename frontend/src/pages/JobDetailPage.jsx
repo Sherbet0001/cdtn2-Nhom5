@@ -20,6 +20,27 @@ import { formatVnd, SALARY_UNIT_LABELS } from '../components/JobCard';
 import { useAuth } from '../contexts/AuthContext';
 import jobService from '../services/jobService';
 
+const APPLICATION_STATUS_BADGE = {
+  PENDING: {
+    label: 'Chờ duyệt (PENDING)',
+    className: 'bg-amber-100 text-amber-800 border-amber-200',
+    boxClass: 'border-amber-200 bg-amber-50 text-amber-900',
+    desc: 'Hồ sơ của bạn đang chờ Nhà tuyển dụng xem xét.',
+  },
+  ACCEPTED: {
+    label: 'Đã chấp nhận (ACCEPTED)',
+    className: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    boxClass: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    desc: 'Chúc mừng! Nhà tuyển dụng đã chấp nhận hồ sơ ứng tuyển của bạn.',
+  },
+  REJECTED: {
+    label: 'Đã từ chối (REJECTED)',
+    className: 'bg-red-100 text-red-800 border-red-200',
+    boxClass: 'border-red-200 bg-red-50 text-red-900',
+    desc: 'Hồ sơ của bạn chưa phù hợp với đợt tuyển dụng này.',
+  },
+};
+
 const JobDetailPage = () => {
   const { id } = useParams();
   const { user, isAuthenticated } = useAuth();
@@ -257,9 +278,26 @@ const JobDetailPage = () => {
           )}
 
           {job.hasApplied ? (
-            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-medium text-blue-800">
-              Bạn đã nộp hồ sơ ứng tuyển vào công việc này.
-            </div>
+            (() => {
+              const appStatus = job.myApplicationStatus || 'PENDING';
+              const statusCfg =
+                APPLICATION_STATUS_BADGE[appStatus] || APPLICATION_STATUS_BADGE.PENDING;
+              return (
+                <div className={`mt-4 rounded-xl border p-4 text-sm ${statusCfg.boxClass}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold">
+                      Trạng thái hồ sơ ứng tuyển của bạn:
+                    </span>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-bold ${statusCfg.className}`}
+                    >
+                      {statusCfg.label}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-xs opacity-90">{statusCfg.desc}</p>
+                </div>
+              );
+            })()
           ) : job.status !== 'OPEN' ? (
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
               Tin tuyển dụng này hiện không còn ở trạng thái mở nhận hồ sơ (OPEN).

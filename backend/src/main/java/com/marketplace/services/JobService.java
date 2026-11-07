@@ -6,6 +6,7 @@ import com.marketplace.dtos.PageResponse;
 import com.marketplace.entities.ApplicationStatus;
 import com.marketplace.entities.Category;
 import com.marketplace.entities.Job;
+import com.marketplace.entities.JobApplication;
 import com.marketplace.entities.JobStatus;
 import com.marketplace.entities.Location;
 import com.marketplace.entities.Profile;
@@ -460,8 +461,15 @@ public class JobService {
         long acceptedCount = applicationRepository.countByJobIdAndStatus(job.getId(), ApplicationStatus.ACCEPTED);
 
         Boolean hasApplied = null;
+        String myApplicationStatus = null;
         if (currentUserId != null) {
-            hasApplied = applicationRepository.existsByJobIdAndStudentId(job.getId(), currentUserId);
+            JobApplication existingApp = applicationRepository
+                    .findByJobIdAndStudentId(job.getId(), currentUserId)
+                    .orElse(null);
+            hasApplied = existingApp != null;
+            if (existingApp != null) {
+                myApplicationStatus = existingApp.getStatus().name();
+            }
         }
 
         return JobResponse.builder()
@@ -487,6 +495,7 @@ public class JobService {
                 .applicantCount(applicantCount)
                 .acceptedCount(acceptedCount)
                 .hasApplied(hasApplied)
+                .myApplicationStatus(myApplicationStatus)
                 .status(job.getStatus().name())
                 .createdAt(job.getCreatedAt())
                 .updatedAt(job.getUpdatedAt())
