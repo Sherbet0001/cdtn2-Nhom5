@@ -6,7 +6,7 @@ services:
     container_name: vlu-parttime-mysql
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${DB_NAME:-parttime_db}
+      MYSQL_DATABASE: ${DB_NAME:-student_job_marketplace}
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root123456}
       TZ: Asia/Ho_Chi_Minh
     command:
@@ -34,7 +34,7 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${DB_NAME:-parttime_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${DB_NAME:-student_job_marketplace}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-root123456}
       APP_JWT_SECRET: ${JWT_SECRET:-VluPartTimeJobMarketplaceSecretKey2026ForHmacSha256Authentication999}

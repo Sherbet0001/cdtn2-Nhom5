@@ -72,7 +72,7 @@ docker compose up -d --build
 ### Cách 2: Chạy trực tiếp trên máy phát triển (Local Development)
 
 #### Bước 1: Khởi chạy Backend (Spring Boot)
-- **Chạy với MySQL 8.0** (mặc định tại `localhost:3306/parttime_db`):
+- **Chạy với MySQL 8.0** (mặc định tại `localhost:3306/student_job_marketplace`):
   ```bash
   cd backend
   ./mvnw spring-boot:run

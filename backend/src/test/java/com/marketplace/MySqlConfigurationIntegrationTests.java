@@ -50,7 +50,7 @@ class MySqlConfigurationIntegrationTests {
     static boolean isMySqlReachable() {
         String host = System.getenv().getOrDefault("DB_HOST", "localhost");
         String port = System.getenv().getOrDefault("DB_PORT", "3306");
-        String dbName = System.getenv().getOrDefault("DB_NAME", "parttime_db");
+        String dbName = System.getenv().getOrDefault("DB_NAME", "student_job_marketplace");
         String user = System.getenv().getOrDefault("DB_USERNAME", "root");
         String password = System.getenv().getOrDefault("DB_PASSWORD", "");
         String url = String.format(
