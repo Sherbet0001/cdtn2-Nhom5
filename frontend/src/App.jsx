@@ -44,7 +44,7 @@ const App = () => {
       <Navbar />
       <main>
         <Routes>
-          <Route path="/" element={<Navigate to="/jobs" replace />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/jobs" element={<JobListPage />} />
           <Route path="/jobs/:id" element={<JobDetailPage />} />
           <Route
