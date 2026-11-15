@@ -159,6 +159,30 @@ class JobAndApplicationIntegrationTests {
     }
 
     @Test
+    @DisplayName("FR-17 validation: Không tạo tin khi thiếu tiêu đề")
+    void createJob_FR17_missingTitle_returnsBadRequestAndDoesNotPersist() throws Exception {
+        String employerToken = obtainToken("hr@cafegocpho.vn", "Abc@12345");
+        CreateJobRequest request = CreateJobRequest.builder()
+                .description("Mô tả công việc hợp lệ để kiểm tra trường tiêu đề bắt buộc.")
+                .categoryId(1L)
+                .locationId(1L)
+                .salaryMin(new BigDecimal("25000"))
+                .salaryMax(new BigDecimal("35000"))
+                .salaryUnit("HOUR")
+                .workSchedule("Ca tối")
+                .startDate(LocalDate.of(2026, 6, 1))
+                .endDate(LocalDate.of(2026, 8, 1))
+                .slots(1)
+                .build();
+
+        mockMvc.perform(post("/api/v1/jobs")
+                        .header("Authorization", "Bearer " + employerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("FR-18 & FR-19: NTD xem danh sách tin đã đăng (GET /jobs/mine), cập nhật tin (PUT /jobs/{id}), chặn sửa tin của NTD khác (403) hoặc tin COMPLETED (409)")
     void manageEmployerJobs_FR18_FR19_listMineAndUpdateJob_enforcesOwnershipAndStatusRules() throws Exception {
         String employer1Token = obtainToken("hr@cafegocpho.vn", "Abc@12345");

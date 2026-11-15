@@ -8,11 +8,14 @@ import com.marketplace.dtos.CreateReviewRequest;
 import com.marketplace.dtos.LoginRequest;
 import com.marketplace.dtos.UpdateApplicationStatusRequest;
 import com.marketplace.dtos.UpdateJobStatusRequest;
+import com.marketplace.entities.ApplicationStatus;
 import com.marketplace.entities.Job;
+import com.marketplace.entities.JobApplication;
 import com.marketplace.entities.Review;
 import com.marketplace.entities.ReviewStatus;
 import com.marketplace.entities.User;
 import com.marketplace.repositories.JobRepository;
+import com.marketplace.repositories.ApplicationRepository;
 import com.marketplace.repositories.NotificationRepository;
 import com.marketplace.repositories.ReviewRepository;
 import com.marketplace.repositories.UserRepository;
@@ -60,6 +63,9 @@ class Sprint4WorkflowIntegrationTests {
     private JobRepository jobRepository;
 
     @Autowired
+    private ApplicationRepository applicationRepository;
+
+    @Autowired
     private ReviewRepository reviewRepository;
 
     @Autowired
@@ -86,7 +92,7 @@ class Sprint4WorkflowIntegrationTests {
                 .workSchedule("Thứ 2 - Thứ 4 - Thứ 6 (18:00 - 21:00)")
                 .startDate(LocalDate.of(2026, 6, 1))
                 .endDate(LocalDate.of(2026, 9, 30))
-                .slots(2)
+                .slots(1)
                 .build();
 
         MvcResult jobRes = mockMvc.perform(post("/api/v1/jobs")
@@ -247,6 +253,7 @@ class Sprint4WorkflowIntegrationTests {
     void changeJobStatus_FR23_invalidTransitionsAndTerminalStates_returns409Conflict() throws Exception {
         String employerToken = obtainToken("hr@cafegocpho.vn", "Abc@12345");
         Long jobId = createSampleOpenJob(employerToken, "Nhân viên Kiểm kê Kho Cuối tuần");
+        addAcceptedApplications(jobId, "sv1@vanlanguni.vn", "sv2@vanlanguni.vn");
 
         // 1. Chặn nhảy cóc OPEN -> COMPLETED (phải qua FILLED trước) -> 409
         mockMvc.perform(patch("/api/v1/jobs/" + jobId + "/status")
@@ -331,6 +338,53 @@ class Sprint4WorkflowIntegrationTests {
     }
 
     @Test
+    @DisplayName("FR-23 regression: Không chuyển OPEN sang FILLED khi số ACCEPTED chưa đạt slots")
+    void changeJobStatus_FR23_openToFilledBeforeSlotsReached_returnsConflict() throws Exception {
+        String employerToken = obtainToken("hr@cafegocpho.vn", "Abc@12345");
+        Long jobId = createSampleOpenJob(employerToken, "FR23 slot regression " + System.nanoTime());
+
+        mockMvc.perform(patch("/api/v1/jobs/" + jobId + "/status")
+                        .header("Authorization", "Bearer " + employerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpdateJobStatusRequest("FILLED"))))
+                .andExpect(status().isConflict());
+
+        assertThat(jobRepository.findById(jobId).orElseThrow().getStatus().name()).isEqualTo("OPEN");
+    }
+
+    @Test
+    @DisplayName("FR-23: Cho phép chuyển OPEN sang FILLED khi acceptedCount bằng slots")
+    void changeJobStatus_FR23_openToFilledWhenSlotsExactlyAccepted_succeeds() throws Exception {
+        String employerToken = obtainToken("hr@cafegocpho.vn", "Abc@12345");
+        Long jobId = createSampleOpenJob(employerToken, "FR23 exact slots " + System.nanoTime());
+        addAcceptedApplications(jobId, "sv1@vanlanguni.vn", "sv2@vanlanguni.vn");
+
+        mockMvc.perform(patch("/api/v1/jobs/" + jobId + "/status")
+                        .header("Authorization", "Bearer " + employerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpdateJobStatusRequest("FILLED"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("FILLED"));
+    }
+
+    @Test
+    @DisplayName("FR-23: Từ chối OPEN sang FILLED và giữ OPEN khi acceptedCount vượt slots")
+    void changeJobStatus_FR23_openToFilledWhenAcceptedExceedsSlots_returnsConflict() throws Exception {
+        String employerToken = obtainToken("hr@cafegocpho.vn", "Abc@12345");
+        Long jobId = createSampleOpenJob(employerToken, "FR23 over slots " + System.nanoTime());
+        addAcceptedApplications(jobId, "sv1@vanlanguni.vn", "sv2@vanlanguni.vn", "sv3@vanlanguni.vn");
+
+        mockMvc.perform(patch("/api/v1/jobs/" + jobId + "/status")
+                        .header("Authorization", "Bearer " + employerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpdateJobStatusRequest("FILLED"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_STATUS_TRANSITION"));
+
+        assertThat(jobRepository.findById(jobId).orElseThrow().getStatus().name()).isEqualTo("OPEN");
+    }
+
+    @Test
     @DisplayName("TC-04 & TC-05 (FR-15, FR-24): Chặn đánh giá khi tin chưa COMPLETED (409) và chặn đánh giá lặp (409)")
     void reviewUser_FR15_FR24_notCompletedOrDuplicateReview_returns409Conflict() throws Exception {
         String employerToken = obtainToken("hr@cafegocpho.vn", "Abc@12345");
@@ -338,7 +392,7 @@ class Sprint4WorkflowIntegrationTests {
         User employer = userRepository.findByEmail("hr@cafegocpho.vn").orElseThrow();
         User student = userRepository.findByEmail("sv1@vanlanguni.vn").orElseThrow();
 
-        Long jobId = createSampleOpenJob(employerToken, "Cộng tác viên Chụp ảnh Sản phẩm");
+        Long jobId = createSampleOpenJob(employerToken, "Cộng tác viên Chụp ảnh Sản phẩm", 1);
 
         MvcResult appRes = mockMvc.perform(post("/api/v1/jobs/" + jobId + "/applications")
                         .header("Authorization", "Bearer " + studentToken)
@@ -418,6 +472,8 @@ class Sprint4WorkflowIntegrationTests {
 
         Long appId = objectMapper.readTree(appRes.getResponse().getContentAsString())
                 .path("data").path("applicationId").asLong();
+
+        addAcceptedApplications(jobId, "sv1@vanlanguni.vn", "sv3@vanlanguni.vn");
 
         // NTD từ chối (REJECTED) hồ sơ của sv2
         mockMvc.perform(patch("/api/v1/applications/" + appId + "/status")
@@ -553,6 +609,10 @@ class Sprint4WorkflowIntegrationTests {
     }
 
     private Long createSampleOpenJob(String employerToken, String title) throws Exception {
+        return createSampleOpenJob(employerToken, title, 2);
+    }
+
+    private Long createSampleOpenJob(String employerToken, String title, int slots) throws Exception {
         CreateJobRequest request = CreateJobRequest.builder()
                 .title(title)
                 .description("Mô tả chi tiết cho công việc: " + title)
@@ -564,7 +624,7 @@ class Sprint4WorkflowIntegrationTests {
                 .workSchedule("Linh hoạt theo ca")
                 .startDate(LocalDate.of(2026, 6, 1))
                 .endDate(LocalDate.of(2026, 12, 31))
-                .slots(2)
+                .slots(slots)
                 .build();
 
         MvcResult result = mockMvc.perform(post("/api/v1/jobs")
@@ -576,6 +636,19 @@ class Sprint4WorkflowIntegrationTests {
 
         return objectMapper.readTree(result.getResponse().getContentAsString())
                 .path("data").path("jobId").asLong();
+    }
+
+    private void addAcceptedApplications(Long jobId, String... studentEmails) {
+        Job job = jobRepository.getReferenceById(jobId);
+        for (String email : studentEmails) {
+            User student = userRepository.findByEmail(email).orElseThrow();
+            applicationRepository.save(JobApplication.builder()
+                    .job(job)
+                    .student(student)
+                    .status(ApplicationStatus.ACCEPTED)
+                    .build());
+        }
+        applicationRepository.flush();
     }
 
     private String obtainToken(String email, String password) throws Exception {

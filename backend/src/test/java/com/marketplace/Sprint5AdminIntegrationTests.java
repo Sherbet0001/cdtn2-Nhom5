@@ -280,10 +280,25 @@ class Sprint5AdminIntegrationTests {
         String adminToken = loginAndGetToken("admin@vlu.edu.vn", "Abc@12345");
         String employerToken = loginAndGetToken("hr@cafegocpho.vn", "Abc@12345");
         String studentToken = loginAndGetToken("sv1@vanlanguni.vn", "Abc@12345");
+        String secondStudentToken = loginAndGetToken("sv2@vanlanguni.vn", "Abc@12345");
 
         // 1. Hoàn thành công việc #1 và tạo đánh giá từ SV -> NTD
         UpdateApplicationStatusRequest acceptReq = UpdateApplicationStatusRequest.builder().status("ACCEPTED").build();
         mockMvc.perform(patch("/api/v1/applications/1/status")
+                        .header("Authorization", "Bearer " + employerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(acceptReq)))
+                .andExpect(status().isOk());
+
+        MvcResult secondApplication = mockMvc.perform(post("/api/v1/jobs/1/applications")
+                        .header("Authorization", "Bearer " + secondStudentToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"coverLetter\":\"Ứng tuyển cho kiểm thử hoàn tất đủ slots.\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long secondApplicationId = objectMapper.readTree(secondApplication.getResponse().getContentAsString())
+                .path("data").path("applicationId").asLong();
+        mockMvc.perform(patch("/api/v1/applications/" + secondApplicationId + "/status")
                         .header("Authorization", "Bearer " + employerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(acceptReq)))

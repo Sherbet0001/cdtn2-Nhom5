@@ -26,6 +26,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -52,6 +53,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @SuppressWarnings("null")
 public class JobService {
 
@@ -206,6 +208,25 @@ public class JobService {
         }
 
         JobStatus currentStatus = job.getStatus();
+
+        if (currentStatus == JobStatus.OPEN && targetStatus == JobStatus.FILLED) {
+            long acceptedCount = applicationRepository.countByJobIdAndStatus(jobId, ApplicationStatus.ACCEPTED);
+            int slots = job.getSlots();
+            if (acceptedCount > slots) {
+                log.error("Invalid accepted application count for job: jobId={}, acceptedCount={}, slots={}",
+                        jobId, acceptedCount, slots);
+                throw new AppException(
+                        "INVALID_STATUS_TRANSITION",
+                        "Không thể chuyển tin sang FILLED vì số ứng viên được chấp nhận vượt quá số lượng tuyển"
+                );
+            }
+            if (acceptedCount < slots) {
+                throw new AppException(
+                        "INVALID_STATUS_TRANSITION",
+                        "Chỉ có thể chuyển tin sang FILLED khi số ứng viên được chấp nhận bằng số lượng tuyển"
+                );
+            }
+        }
 
         // QT-JOB (FR-23, Mục 5): Kiểm tra quy tắc chuyển trạng thái:
         // OPEN -> FILLED -> COMPLETED; OPEN/FILLED -> CLOSED; CLOSED và COMPLETED là trạng thái cuối, không quay ngược
