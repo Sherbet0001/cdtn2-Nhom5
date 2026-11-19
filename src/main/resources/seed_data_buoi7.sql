@@ -44,7 +44,7 @@ INSERT IGNORE INTO `tbl_locations` (`id`, `city`, `district`) VALUES
 (10, 'TP. Hồ Chí Minh', 'Quận 5');
 
 -- 3. Bảng tài khoản người dùng mẫu (tbl_users - FR-01, 02, 04, 26)
--- Mật khẩu mặc định cho tất cả tài khoản mẫu là: Abc@12345
+-- Mật khẩu mặc định cho tất cả tài khoản mẫu là: 123
 CREATE TABLE IF NOT EXISTS `tbl_users` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `email` VARCHAR(150) NOT NULL UNIQUE,
@@ -54,14 +54,15 @@ CREATE TABLE IF NOT EXISTS `tbl_users` (
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT IGNORE INTO `tbl_users` (`id`, `email`, `password_hash`, `role`, `status`, `created_at`) VALUES
-(1, 'admin@freelance.vlu.edu.vn', 'Abc@12345', 'ADMIN', 'ACTIVE', NOW()),
-(2, 'cafegocpho@gmail.com', 'Abc@12345', 'EMPLOYER', 'ACTIVE', NOW()),
-(3, 'thecoffeelab@gmail.com', 'Abc@12345', 'EMPLOYER', 'ACTIVE', NOW()),
-(4, 'events.saigon@gmail.com', 'Abc@12345', 'EMPLOYER', 'ACTIVE', NOW()),
-(5, 'tien.sv@student.vlu.edu.vn', 'Abc@12345', 'STUDENT', 'ACTIVE', NOW()),
-(6, 'dat.sv@student.vlu.edu.vn', 'Abc@12345', 'STUDENT', 'ACTIVE', NOW()),
-(7, 'khoa.sv@student.vlu.edu.vn', 'Abc@12345', 'STUDENT', 'ACTIVE', NOW());
+INSERT INTO `tbl_users` (`id`, `email`, `password_hash`, `role`, `status`, `created_at`) VALUES
+(1, 'admin@freelance.vlu.edu.vn', '123', 'ADMIN', 'ACTIVE', NOW()),
+(2, 'cafegocpho@gmail.com', '123', 'EMPLOYER', 'ACTIVE', NOW()),
+(3, 'thecoffeelab@gmail.com', '123', 'EMPLOYER', 'ACTIVE', NOW()),
+(4, 'events.saigon@gmail.com', '123', 'EMPLOYER', 'ACTIVE', NOW()),
+(5, 'tien.sv@student.vlu.edu.vn', '123', 'STUDENT', 'ACTIVE', NOW()),
+(6, 'dat.sv@student.vlu.edu.vn', '123', 'STUDENT', 'ACTIVE', NOW()),
+(7, 'khoa.sv@student.vlu.edu.vn', '123', 'STUDENT', 'ACTIVE', NOW())
+ON DUPLICATE KEY UPDATE `password_hash` = '123';
 
 -- 4. Bảng hồ sơ người dùng (tbl_profiles - FR-05, 11, 16, 20)
 CREATE TABLE IF NOT EXISTS `tbl_profiles` (
