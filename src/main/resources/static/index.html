@@ -25,21 +25,40 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-slate-900 leading-tight">Nền tảng Freelance / Part-time Sinh viên</h1>
-          <p class="text-xs text-slate-500">Buổi 7: Sprint 2 Demo (Mốc giữa kỳ lần 2) · SVTH: Đoàn Xuân Tiến (2374802010493)</p>
+          <p class="text-xs text-slate-500">Hệ thống Xác thực RBAC (FR-01 đến FR-04) · SVTH: Đoàn Xuân Tiến</p>
         </div>
       </div>
       <div class="flex items-center space-x-3">
         <a href="/swagger-ui.html" target="_blank" class="inline-flex items-center px-3 py-1.5 border border-slate-300 text-xs font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition">
           <i data-lucide="code" class="w-4 h-4 mr-1.5 text-blue-600"></i>
-          Swagger API Docs
+          Swagger Docs
         </a>
-        <button onclick="openModal()" class="inline-flex items-center px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-md shadow-sm transition">
+
+        <!-- Khu vực đăng nhập / Thông tin người dùng -->
+        <div id="authArea" class="flex items-center space-x-2">
+          <!-- Sẽ được render động qua JavaScript -->
+        </div>
+
+        <button id="btnCreateJob" onclick="openModal()" class="hidden items-center px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-md shadow-sm transition">
           <i data-lucide="plus-circle" class="w-4 h-4 mr-1.5"></i>
-          Đăng tin mới (NTD - FR-17)
+          Đăng tin mới (NTD)
         </button>
       </div>
     </div>
   </header>
+
+  <!-- Banner thông tin vai trò hiện tại -->
+  <div id="roleBanner" class="bg-slate-100 border-b border-slate-200 px-4 py-2 text-xs text-slate-600 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto w-full flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="font-semibold text-slate-700">Trạng thái đăng nhập:</span>
+        <span id="roleIndicator" class="px-2 py-0.5 rounded font-bold bg-slate-200 text-slate-700">Khách vãng lai (Chưa đăng nhập)</span>
+      </div>
+      <div class="text-[11px] text-slate-500">
+        Hỗ trợ 3 vai trò: <strong class="text-purple-700">Quản trị viên (ADMIN)</strong> · <strong class="text-emerald-700">Sinh viên (STUDENT)</strong> · <strong class="text-blue-700">Nhà tuyển dụng (EMPLOYER)</strong>
+      </div>
+    </div>
+  </div>
 
   <!-- Main Content -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
@@ -126,6 +145,59 @@
 
   </main>
 
+  <!-- Login Modal (FR-02, FR-04) -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl text-xs">
+      <div class="flex items-center justify-between border-b pb-3 mb-4">
+        <h3 class="text-base font-bold text-slate-900 flex items-center">
+          <i data-lucide="log-in" class="w-5 h-5 text-red-600 mr-2"></i>
+          Đăng nhập hệ thống (FR-02)
+        </h3>
+        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Quick 1-Click Login for Demo -->
+      <div class="mb-4 bg-slate-50 border border-slate-200 p-3 rounded-xl">
+        <p class="font-bold text-slate-700 mb-2 flex items-center">
+          <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500 mr-1.5"></i>
+          Chọn nhanh tài khoản để đăng nhập:
+        </p>
+        <div class="grid grid-cols-1 gap-1.5">
+          <button type="button" onclick="quickFillLogin('admin@freelance.vlu.edu.vn', 'Abc@12345')" class="w-full text-left px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 rounded-lg flex items-center justify-between transition">
+            <span>🛡️ <strong>Quản trị viên (ADMIN)</strong></span>
+            <span class="text-[10px] text-purple-600">admin@freelance.vlu.edu.vn</span>
+          </button>
+          <button type="button" onclick="quickFillLogin('tien.sv@student.vlu.edu.vn', 'Abc@12345')" class="w-full text-left px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-lg flex items-center justify-between transition">
+            <span>🎓 <strong>Sinh viên (STUDENT)</strong></span>
+            <span class="text-[10px] text-emerald-600">tien.sv@student.vlu.edu.vn</span>
+          </button>
+          <button type="button" onclick="quickFillLogin('cafegocpho@gmail.com', 'Abc@12345')" class="w-full text-left px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 rounded-lg flex items-center justify-between transition">
+            <span>💼 <strong>Nhà tuyển dụng (EMPLOYER)</strong></span>
+            <span class="text-[10px] text-blue-600">cafegocpho@gmail.com</span>
+          </button>
+        </div>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-3">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Email đăng nhập *</label>
+          <input type="email" id="loginEmail" required placeholder="nhap.email@vlu.edu.vn" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Mật khẩu *</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-500">
+        </div>
+
+        <div class="pt-2 flex justify-end space-x-2 border-t">
+          <button type="button" onclick="closeLoginModal()" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50">Hủy</button>
+          <button type="submit" class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow transition">Đăng nhập</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Create Job Modal (FR-17) -->
   <div id="jobModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -203,7 +275,7 @@
         <div class="grid grid-cols-3 gap-2">
           <div>
             <label class="block font-semibold text-slate-700 mb-1">Ngày bắt đầu *</label>
-            <input type="date" id="m_startDate" required value="2026-11-01" class="w-full px-3 py-2 border rounded-lg outline-none">
+            <input type="date" id="m_startDate" required value="2026-11-25" class="w-full px-3 py-2 border rounded-lg outline-none">
           </div>
           <div>
             <label class="block font-semibold text-slate-700 mb-1">Ngày kết thúc *</label>
@@ -312,6 +384,155 @@
   <!-- Client-side Logic -->
   <script>
     let currentMode = 'ALL';
+    let currentUser = null; // { id, email, role, fullName, token }
+
+    function loadUserFromStorage() {
+      const stored = localStorage.getItem('vlu_auth');
+      if (stored) {
+        try {
+          currentUser = JSON.parse(stored);
+        } catch (e) {
+          currentUser = null;
+        }
+      }
+      renderAuthArea();
+    }
+
+    function renderAuthArea() {
+      const authArea = document.getElementById('authArea');
+      const roleIndicator = document.getElementById('roleIndicator');
+      const btnCreateJob = document.getElementById('btnCreateJob');
+
+      if (currentUser && currentUser.token) {
+        let badgeStyle = 'bg-blue-100 text-blue-800 border-blue-200';
+        let roleName = 'Nhà tuyển dụng';
+        if (currentUser.role === 'ADMIN') {
+          badgeStyle = 'bg-purple-100 text-purple-800 border-purple-200';
+          roleName = 'Quản trị viên';
+        } else if (currentUser.role === 'STUDENT') {
+          badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+          roleName = 'Sinh viên';
+        }
+
+        roleIndicator.className = `px-2 py-0.5 rounded font-bold border ${badgeStyle}`;
+        roleIndicator.innerText = `${roleName}: ${currentUser.fullName} (${currentUser.email})`;
+
+        authArea.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold border ${badgeStyle}">
+              ${roleName}
+            </span>
+            <span class="text-xs font-bold text-slate-700">${currentUser.fullName}</span>
+            <button onclick="handleLogout()" class="px-2.5 py-1 text-xs border border-slate-300 rounded-md hover:bg-slate-50 text-slate-600 transition flex items-center">
+              <i data-lucide="log-out" class="w-3.5 h-3.5 mr-1"></i>
+              Đăng xuất
+            </button>
+          </div>
+        `;
+
+        // Chỉ hiển thị nút Đăng tin mới cho EMPLOYER
+        if (currentUser.role === 'EMPLOYER' || currentUser.role === 'ADMIN') {
+          btnCreateJob.classList.remove('hidden');
+          btnCreateJob.classList.add('inline-flex');
+        } else {
+          btnCreateJob.classList.add('hidden');
+          btnCreateJob.classList.remove('inline-flex');
+        }
+      } else {
+        roleIndicator.className = 'px-2 py-0.5 rounded font-bold bg-slate-200 text-slate-700';
+        roleIndicator.innerText = 'Khách vãng lai (Chưa đăng nhập)';
+
+        authArea.innerHTML = `
+          <button onclick="openLoginModal()" class="inline-flex items-center px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-md shadow-sm transition">
+            <i data-lucide="log-in" class="w-4 h-4 mr-1.5"></i>
+            Đăng nhập
+          </button>
+        `;
+        btnCreateJob.classList.add('hidden');
+        btnCreateJob.classList.remove('inline-flex');
+      }
+      lucide.createIcons();
+    }
+
+    function openLoginModal() {
+      document.getElementById('loginModal').classList.remove('hidden');
+    }
+
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.add('hidden');
+    }
+
+    function quickFillLogin(email, password) {
+      document.getElementById('loginEmail').value = email;
+      document.getElementById('loginPassword').value = password;
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert('Đăng nhập thất bại: ' + (err.message || 'Sai tài khoản hoặc mật khẩu'));
+          return;
+        }
+
+        const data = await res.json();
+        currentUser = {
+          id: data.user.id,
+          email: data.user.email,
+          role: data.user.role,
+          fullName: data.user.fullName,
+          token: data.accessToken
+        };
+        localStorage.setItem('vlu_auth', JSON.stringify(currentUser));
+        alert(`Chào mừng ${currentUser.fullName} (${currentUser.role}) đã đăng nhập thành công!`);
+        closeLoginModal();
+        renderAuthArea();
+        fetchJobs();
+      } catch (err) {
+        // Fallback demo khi chưa chạy server
+        let mockRole = 'STUDENT';
+        let mockName = 'Đoàn Xuân Tiến';
+        let mockId = 5;
+        if (email.includes('admin')) { mockRole = 'ADMIN'; mockName = 'Quản trị viên hệ thống'; mockId = 1; }
+        else if (email.includes('cafe')) { mockRole = 'EMPLOYER'; mockName = 'Cafe Góc Phố'; mockId = 2; }
+
+        currentUser = { id: mockId, email, role: mockRole, fullName: mockName, token: 'demo-mock-jwt-token' };
+        localStorage.setItem('vlu_auth', JSON.stringify(currentUser));
+        alert(`[Chế độ Demo] Đăng nhập giả lập thành công với vai trò: ${mockRole}`);
+        closeLoginModal();
+        renderAuthArea();
+        fetchJobs();
+      }
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      localStorage.removeItem('vlu_auth');
+      renderAuthArea();
+      fetchJobs();
+      alert('Đã đăng xuất khỏi hệ thống.');
+    }
+
+    function getAuthHeaders() {
+      const headers = { 'Content-Type': 'application/json' };
+      if (currentUser && currentUser.token) {
+        headers['Authorization'] = 'Bearer ' + currentUser.token;
+        headers['X-User-Id'] = String(currentUser.id);
+      } else {
+        headers['X-User-Id'] = '2'; // Fallback test
+      }
+      return headers;
+    }
 
     const fallbackMockJobs = [
       {
@@ -378,7 +599,9 @@
       params.append('size', '20');
 
       try {
-        const res = await fetch(url + params.toString());
+        const res = await fetch(url + params.toString(), {
+          headers: getAuthHeaders()
+        });
         if (!res.ok) throw new Error('API server error');
         const data = await res.json();
         renderJobs(data.content || []);
@@ -403,6 +626,9 @@
         lucide.createIcons();
         return;
       }
+
+      const isEmployer = currentUser && (currentUser.role === 'EMPLOYER' || currentUser.role === 'ADMIN');
+      const isStudent = !currentUser || currentUser.role === 'STUDENT';
 
       container.innerHTML = jobs.map(job => {
         let badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
@@ -456,27 +682,25 @@
                   </p>
                 </div>
                 
-                <div class="flex items-center space-x-1">
-                  <button onclick="openStatusModal(${job.id}, '${job.status}')" title="Đổi trạng thái tin (FR-23)" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition">
-                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-                  </button>
-                  <button onclick="openApplicantsModal(${job.id}, '${job.title}')" title="Xem ứng viên (FR-19)" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-blue-600 transition">
-                    <i data-lucide="users" class="w-3.5 h-3.5"></i>
-                  </button>
-                </div>
+                ${isEmployer ? `
+                  <div class="flex items-center space-x-1">
+                    <button onclick="openStatusModal(${job.id}, '${job.status}')" title="Đổi trạng thái tin (FR-23)" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition">
+                      <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button onclick="openApplicantsModal(${job.id}, '${job.title}')" title="Xem ứng viên (FR-19)" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-blue-600 transition">
+                      <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                ` : ''}
               </div>
 
               <!-- Action button: Ứng tuyển (SV - FR-12) -->
-              ${job.status === 'OPEN' ? `
+              ${isStudent && job.status === 'OPEN' ? `
                 <button onclick="openApplyModal(${job.id}, '${job.title}')" class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition flex items-center justify-center text-xs">
                   <i data-lucide="send" class="w-3.5 h-3.5 mr-1.5"></i>
                   Ứng tuyển ngay (FR-12)
                 </button>
-              ` : `
-                <button disabled class="w-full py-1.5 bg-slate-100 text-slate-400 font-semibold rounded-lg text-xs cursor-not-allowed">
-                  Đã dừng nhận hồ sơ
-                </button>
-              `}
+              ` : ''}
             </div>
           </div>
         `;
@@ -527,7 +751,7 @@
       try {
         const res = await fetch('/api/v1/jobs', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': '2' },
+          headers: getAuthHeaders(),
           body: JSON.stringify(payload)
         });
         if (!res.ok) {
@@ -560,7 +784,7 @@
       try {
         const res = await fetch(`/api/v1/jobs/${jobId}/status`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': '2' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ status })
         });
         if (!res.ok) {
@@ -595,7 +819,7 @@
       try {
         const res = await fetch(`/api/v1/jobs/${jobId}/applications`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': '5' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ coverLetter })
         });
         if (!res.ok) {
@@ -618,7 +842,7 @@
 
       try {
         const res = await fetch(`/api/v1/jobs/${jobId}/applications`, {
-          headers: { 'X-User-Id': '2' }
+          headers: getAuthHeaders()
         });
         if (!res.ok) throw new Error('API server error');
         const data = await res.json();
@@ -677,7 +901,7 @@
       try {
         const res = await fetch(`/api/v1/applications/${appId}/status`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': '2' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ status })
         });
         if (!res.ok) {
@@ -698,6 +922,7 @@
 
     // Auto load on start
     document.addEventListener('DOMContentLoaded', () => {
+      loadUserFromStorage();
       fetchJobs();
       lucide.createIcons();
     });

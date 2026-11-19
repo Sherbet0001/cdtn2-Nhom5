@@ -1,8 +1,7 @@
 -- ========================================================
--- Dữ liệu mẫu kiểm thử và demo Sprint 2 (Buổi 7 - Đánh giá giữa kỳ lần 2)
+-- Dữ liệu mẫu kiểm thử và demo Sprint 2 / Sprint 3
 -- Đề tài: Nền tảng marketplace việc làm part-time cho sinh viên
 -- Nhóm: Viên Thành Đạt · Đoàn Xuân Tiến · Bùi Đăng Khoa
--- Phụ trách module Job & Application: Đoàn Xuân Tiến - 2374802010493
 -- ========================================================
 
 CREATE DATABASE IF NOT EXISTS `freelance_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -45,6 +44,7 @@ INSERT IGNORE INTO `tbl_locations` (`id`, `city`, `district`) VALUES
 (10, 'TP. Hồ Chí Minh', 'Quận 5');
 
 -- 3. Bảng tài khoản người dùng mẫu (tbl_users - FR-01, 02, 04, 26)
+-- Mật khẩu mặc định cho tất cả tài khoản mẫu là: Abc@12345
 CREATE TABLE IF NOT EXISTS `tbl_users` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `email` VARCHAR(150) NOT NULL UNIQUE,
@@ -55,15 +55,39 @@ CREATE TABLE IF NOT EXISTS `tbl_users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `tbl_users` (`id`, `email`, `password_hash`, `role`, `status`, `created_at`) VALUES
-(1, 'admin@freelance.vlu.edu.vn', '$2a$10$wN9aZk1cE1F8l7K.0a6rUuJ6QoO7h3mI9c3bZ1a2c3d4e5f6g7h8i', 'ADMIN', 'ACTIVE', NOW()),
-(2, 'cafegocpho@gmail.com', '$2a$10$wN9aZk1cE1F8l7K.0a6rUuJ6QoO7h3mI9c3bZ1a2c3d4e5f6g7h8i', 'EMPLOYER', 'ACTIVE', NOW()),
-(3, 'thecoffeelab@gmail.com', '$2a$10$wN9aZk1cE1F8l7K.0a6rUuJ6QoO7h3mI9c3bZ1a2c3d4e5f6g7h8i', 'EMPLOYER', 'ACTIVE', NOW()),
-(4, 'events.saigon@gmail.com', '$2a$10$wN9aZk1cE1F8l7K.0a6rUuJ6QoO7h3mI9c3bZ1a2c3d4e5f6g7h8i', 'EMPLOYER', 'ACTIVE', NOW()),
-(5, 'tien.sv@student.vlu.edu.vn', '$2a$10$wN9aZk1cE1F8l7K.0a6rUuJ6QoO7h3mI9c3bZ1a2c3d4e5f6g7h8i', 'STUDENT', 'ACTIVE', NOW()),
-(6, 'dat.sv@student.vlu.edu.vn', '$2a$10$wN9aZk1cE1F8l7K.0a6rUuJ6QoO7h3mI9c3bZ1a2c3d4e5f6g7h8i', 'STUDENT', 'ACTIVE', NOW()),
-(7, 'khoa.sv@student.vlu.edu.vn', '$2a$10$wN9aZk1cE1F8l7K.0a6rUuJ6QoO7h3mI9c3bZ1a2c3d4e5f6g7h8i', 'STUDENT', 'ACTIVE', NOW());
+(1, 'admin@freelance.vlu.edu.vn', 'Abc@12345', 'ADMIN', 'ACTIVE', NOW()),
+(2, 'cafegocpho@gmail.com', 'Abc@12345', 'EMPLOYER', 'ACTIVE', NOW()),
+(3, 'thecoffeelab@gmail.com', 'Abc@12345', 'EMPLOYER', 'ACTIVE', NOW()),
+(4, 'events.saigon@gmail.com', 'Abc@12345', 'EMPLOYER', 'ACTIVE', NOW()),
+(5, 'tien.sv@student.vlu.edu.vn', 'Abc@12345', 'STUDENT', 'ACTIVE', NOW()),
+(6, 'dat.sv@student.vlu.edu.vn', 'Abc@12345', 'STUDENT', 'ACTIVE', NOW()),
+(7, 'khoa.sv@student.vlu.edu.vn', 'Abc@12345', 'STUDENT', 'ACTIVE', NOW());
 
--- 4. Bảng tin tuyển dụng (tbl_jobs - FR-07 đến 10, 17, 18, 23)
+-- 4. Bảng hồ sơ người dùng (tbl_profiles - FR-05, 11, 16, 20)
+CREATE TABLE IF NOT EXISTS `tbl_profiles` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT NOT NULL UNIQUE,
+    `full_name` VARCHAR(100) NOT NULL,
+    `phone` VARCHAR(20),
+    `location_id` BIGINT,
+    `bio` TEXT,
+    `school` VARCHAR(100),
+    `major` VARCHAR(100),
+    `cv_content` TEXT,
+    `company_name` VARCHAR(150),
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `tbl_profiles` (`id`, `user_id`, `full_name`, `phone`, `location_id`, `bio`, `school`, `major`, `cv_content`, `company_name`) VALUES
+(1, 1, 'Quản trị viên hệ thống', '0901234567', 1, 'Ban quản trị nền tảng VLU Freelance', NULL, NULL, NULL, NULL),
+(2, 2, 'Cafe Góc Phố', '0912345678', 3, 'Hệ thống quán cà phê sinh viên khu vực Quận 7', NULL, NULL, NULL, 'Công ty TNHH Cafe Góc Phố'),
+(3, 3, 'The Coffee Lab', '0923456789', 5, 'Chuỗi đồ uống mang đi', NULL, NULL, NULL, 'Hộ kinh doanh The Coffee Lab'),
+(4, 4, 'Saigon Events Group', '0934567890', 1, 'Tổ chức sự kiện âm nhạc, hội thảo', NULL, NULL, NULL, 'Saigon Events Group'),
+(5, 5, 'Đoàn Xuân Tiến', '0945678901', 3, 'Sinh viên năm 4 CNTT ĐH Văn Lang', 'Đại học Văn Lang', 'Công nghệ thông tin', 'Kinh nghiệm phục vụ bàn, pha chế cơ bản, nhiệt tình', NULL),
+(6, 6, 'Viên Thành Đạt', '0956789012', 4, 'Sinh viên năm 4 khoa CNTT', 'Đại học Văn Lang', 'Công nghệ phần mềm', 'Kinh nghiệm thu ngân và giao hàng part-time', NULL),
+(7, 7, 'Bùi Đăng Khoa', '0967890123', 2, 'Sinh viên năm 4 khoa CNTT', 'Đại học Văn Lang', 'Kỹ thuật phần mềm', 'Kinh nghiệm gia sư Toán và Anh văn', NULL);
+
+-- 5. Bảng tin tuyển dụng (tbl_jobs - FR-07 đến 10, 17, 18, 23)
 CREATE TABLE IF NOT EXISTS `tbl_jobs` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `employer_id` BIGINT NOT NULL,
@@ -91,7 +115,7 @@ INSERT IGNORE INTO `tbl_jobs` (`id`, `employer_id`, `category_id`, `location_id`
 (4, 4, 4, 1, 'Hỗ trợ sự kiện âm nhạc cuối tuần tại Quận 1', 'Đón khách, soát vé check-in, hướng dẫn vị trí ngồi và hỗ trợ ban tổ chức sân khấu.', 300000, 450000, 'DAY', 'Chủ nhật (13:00 - 22:00)', '2026-11-15', '2026-11-15', 5, 'OPEN', NOW()),
 (5, 2, 1, 3, 'Phụ bếp và dọn dẹp quán nước', 'Hỗ trợ sơ chế nguyên liệu trà sữa, dọn dẹp quầy kệ cuối ca.', 25000, 28000, 'HOUR', 'Ca tối thứ 6, 7', '2026-10-01', '2026-10-25', 2, 'COMPLETED', NOW());
 
--- 5. Bảng hồ sơ ứng tuyển (tbl_applications - FR-12 đến 14, 19, 21, 22)
+-- 6. Bảng hồ sơ ứng tuyển (tbl_applications - FR-12 đến 14, 19, 21, 22)
 CREATE TABLE IF NOT EXISTS `tbl_applications` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `job_id` BIGINT NOT NULL,
